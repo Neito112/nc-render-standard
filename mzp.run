@@ -6,9 +6,6 @@
     eprintln "  NC-Render AI Studio v1.0 — Auto Setup"
     eprintln "=============================================="
     
-    // PHASE 0: Detect & clean old plugin versions before install
-    checkAndWarnOldPlugin
-    
     // PHASE 1: System detection
     eprintln "\n[PHASE 1] Detecting system configuration..."
     
