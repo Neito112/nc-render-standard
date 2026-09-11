@@ -1,0 +1,98 @@
+-- run_install.ms -- NC-Render AI Studio v1.4 installer
+-- Chay sau khi mzp.run giai nen archive vao $temp\NCRender_install
+-- QUY TAC: chi dung messageBox/queryBox, duong dan dau / (khong backslash
+-- trong string), newline trong chuoi viet bang escape \n (2 ky tu).
+
+(
+    local thisDir = getFilenamePath (getThisScriptFilename())
+    local srcMcr = thisDir + "usermacros/NC_Render_Bridge_v1.mcr"
+    local umDir = getDir #usermacros
+
+    fn doInstall srcPath dstPath =
+    (
+        if (doesFileExist srcPath) then
+        (
+            copyFile srcPath dstPath
+            macros.reload()
+            messageBox "NC-Render AI Studio v1.4 cai dat thanh cong!\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category NC-Render AI\n> keo button 'NC-Render v1' ra toolbar." title:"NC-Render Install"
+            true
+        )
+        else
+        (
+            messageBox ("Khong tim thay macroScript trong package:\n" + srcPath) title:"NC-Render Install FAILED"
+            false
+        )
+    )
+
+    fn purgeOld lst =
+    (
+        for f in lst do
+        (
+            if (doesFileExist (f + "/")) then (try (deleteDirectory f) catch())
+            else (try (deleteFile f) catch())
+        )
+        macros.reload()
+    )
+
+    -- ===== QUET BAN CU =====
+    local foundOld = #()
+
+    for f in (getFiles (umDir + "/NC_Render*.mcr")) do appendIfNotFound foundOld f
+    for f in (getFiles (umDir + "/NC_Render*.ms")) do appendIfNotFound foundOld f
+    for f in (getFiles (umDir + "/_render_feedback*")) do appendIfNotFound foundOld f
+
+    local uninstFile = umDir + "/uninstall.ms"
+    if (doesFileExist uninstFile) then
+    (
+        local fh = openFile uninstFile mode:"r"
+        if fh != undefined then
+        (
+            local txt = ""
+            while not (eof fh) do txt += readLine fh + "\n"
+            close fh
+            if (matchPattern txt pattern:"*NC-Render*") or (matchPattern txt pattern:"*NCRender*") then
+                appendIfNotFound foundOld uninstFile
+        )
+    )
+
+    local us = getDir #userScripts
+    for f in (getFiles (us + "/sd_generate.py")) do appendIfNotFound foundOld f
+    for f in (getFiles (us + "/sd_batch.py")) do appendIfNotFound foundOld f
+    for f in (getFiles (us + "/cuda_auto_install.py")) do appendIfNotFound foundOld f
+    for f in (getFiles (us + "/nc_cuda_render.py")) do appendIfNotFound foundOld f
+    for f in (getFiles (us + "/github_update.py")) do appendIfNotFound foundOld f
+    for f in (getFiles (us + "/_setup_download.py")) do appendIfNotFound foundOld f
+
+    local ncFolder = us + "/NC-Render"
+    if (doesFileExist (ncFolder + "/")) do appendIfNotFound foundOld ncFolder
+
+    for f in (getFiles ((getDir #userIcons) + "/NC_Render_*.*")) do appendIfNotFound foundOld f
+
+    local apDir = "C:/ProgramData/Autodesk/ApplicationPlugins/NC_Render_Standard"
+    if (doesFileExist (apDir + "/")) do appendIfNotFound foundOld apDir
+
+    -- ===== QUYET DINH =====
+    local dstMcr = umDir + "/NC_Render_Bridge_v1.mcr"
+
+    if (foundOld.count == 0) then
+    (
+        doInstall srcMcr dstMcr
+    )
+    else
+    (
+        local msgOld = "Phat hien " + (foundOld.count as string) + " thanh phan cu:\n\n"
+        for f in foundOld do msgOld += f + "\n"
+        msgOld += "\nBam [Co] = Go cu + Cai lai.\nBam [Khong] = Chi go, chua cai.\nBam nut Huy tren cua so = giu nguyen."
+
+        local doRemove = queryBox msgOld title:"NC-Render - Phat hien ban cu"
+        if doRemove then
+        (
+            purgeOld foundOld
+            doInstall srcMcr dstMcr
+        )
+        else
+        (
+            messageBox ("Gi nguyen " + (foundOld.count as string) + " thanh phan cu. Cai dat da bi huy.") title:"NC-Render"
+        )
+    )
+)
