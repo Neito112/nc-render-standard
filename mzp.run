@@ -1,10 +1,16 @@
-﻿// mzp.run — MZP Package Control Script
-// NC_Render_Standard v1.0 — Auto-detect + Setup + Install (model download during setup)
+// mzp.run — MZP Package Control Script
+// NC_Render_Standard v1.0.2 — Auto-detect + Setup + Install (model download during setup)
 (
     clearListener()
+    
+    // Hiển thị thông báo ngay lập tức để user biết script đang chạy
+    // Nếu không có dialog này, 3ds Max sẽ silent fail nếu script gặp lỗi
+    messageBox "NC-Render AI Studio đang cài đặt...\nVui lòng chờ..." title:"NC-Render Install"
+    
     eprintln "=============================================="
-    eprintln "  NC-Render AI Studio v1.0 — Auto Setup"
+    eprintln "  NC-Render AI Studio v1.0.2 — Auto Setup"
     eprintln "=============================================="
+    eprintln "[INFO] Script is executing. Waiting for installation..."
     
     // PHASE 1: System detection
     eprintln "\n[PHASE 1] Detecting system configuration..."

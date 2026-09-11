@@ -8,7 +8,7 @@ __pycache__/
 *.pyo
 
 # Model weights (tải tự động qua setup)
-skill/cuda-render-style/models/sd15/*.safetensors
+skill/cuda-render-style/models/**/*.safetensors
 skill/cuda-render-style/models/sd15/*.bin
 
 # Temp files

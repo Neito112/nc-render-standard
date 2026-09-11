@@ -1,40 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- PackageContents.xml — 3ds Max MZP Package Definition -->
-<!-- File này BẮT BUỘC phải có trong .mzp để 3ds Max xử lý -->
-<ApplicationPackage
-  SchemaVersion="1.0"
-  AutodeskProduct="3ds Max"
-  ProductType="Application"
-  Name="NC-Render AI Studio"
-  Description="CUDA Render Plugin for 3ds Max 2024 — Concept-based AI rendering"
-  AppVersion="1.0.1"
-  FriendlyVersion="NC-Render AI Studio v1.0.1"
-  ProductCode="{d4e5f6a7-b8c9-1011-2122-313243445566}"
-  UpgradeCode="{11223344-5566-7788-99aa-bbccddeeff00}">
+<ApplicationPackage SchemaVersion="1.0" AutodeskProduct="3ds Max" ProductType="Application" Name="NC-Render AI Studio" AppVersion="1.0.3" ProductCode="{11111111-2222-3333-4444-555555555555}" UpgradeCode="{66666666-7777-8888-9999-000000000000}">
   <CompanyDetails Name="Neito" />
-  
-  <Components Description="Main installer script">
+  <Components Description="NC-Render AI Studio Plugin">
     <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2024" SeriesMax="2027" />
-    <ComponentEntry ModuleName="mzp.run" />
+    <ComponentEntry ModuleName="./mzp.run" />
   </Components>
-  
-  <Components Description="MacroScript files — main UI">
+  <Components Description="MacroScript files">
     <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2024" SeriesMax="2027" />
-    <ComponentEntry ModuleName="usermacros/NC_Render_Bridge_v1.mcr" />
+    <ComponentEntry ModuleName="./usermacros/NC_Render_Bridge_v1.mcr" />
+    <ComponentEntry ModuleName="./usermacros/NC_Render_Bridge.mcr" />
   </Components>
-  
   <Components Description="Python scripts">
     <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2024" SeriesMax="2027" />
-    <ComponentEntry ModuleName="scripts/" />
+    <ComponentEntry ModuleName="./scripts/" />
   </Components>
-  
-  <Components Description="CUDA Render Skill">
+  <Components Description="Skill files">
     <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2024" SeriesMax="2027" />
-    <ComponentEntry ModuleName="skill/" />
+    <ComponentEntry ModuleName="./skill/" />
   </Components>
-  
   <Components Description="User icons">
     <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2024" SeriesMax="2027" />
-    <ComponentEntry ModuleName="usericons/" />
+    <ComponentEntry ModuleName="./usericons/" />
   </Components>
 </ApplicationPackage>
