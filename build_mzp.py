@@ -93,110 +93,100 @@ clear temp on MAX exit
 # ============ run_install.ms — installer MaxScript that ============
 RUN_INSTALL = r'''
 -- run_install.ms — NC-Render AI Studio v1.4 installer
--- Chay sau khi mzp.run giai nen toan bo archive vào $temp\NCRender_install
--- Nhiem vu: phat hien ban cu -> hoi go cai -> go -> cai ban moi.
+-- Chay sau khi mzp.run giai nen archive vao $temp\NCRender_install
+-- Chi dung messageBox/queryBox (khong dung createDialog -> khong co cua de crash syntax).
 
 (
     local thisDir = getFilenamePath (getThisScriptFilename())
-    local srcMcr = thisDir + "usermacros\\NC_Render_Bridge_v1.mcr"
+    local srcMcr = thisDir + "usermacros\NC_Render_Bridge_v1.mcr"
+    local umDir = getDir #usermacros
+
+    -- ===== Ham cai macroScript =====
+    fn doInstall srcPath dstPath =
+    (
+        if (doesFileExist srcPath) then
+        (
+            copyFile srcPath dstPath
+            macros.reload()
+            messageBox "NC-Render AI Studio v1.4 cai dat thanh cong!\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category NC-Render AI\n> keo button 'NC-Render v1' ra toolbar." title:"NC-Render Install"
+            true
+        )
+        else
+        (
+            messageBox ("Khong tim thay macroScript trong package:\n" + srcPath) title:"NC-Render Install FAILED"
+            false
+        )
+    )
+
+    -- ===== Ham go sach danh sach cu =====
+    fn purgeOld lst =
+    (
+        for f in lst do
+        (
+            if (doesFileExist (f + "\")) then (try (deleteDirectory f) catch())
+            else (try (deleteFile f) catch())
+        )
+        macros.reload()
+    )
 
     -- ===== 1. QUET BAN CU =====
     local foundOld = #()
 
-    -- 1a. usermacros: moi thu mang ten NC_Render
-    local umDir = getDir #usermacros
-    for f in (getFiles (umDir + "\\NC_Render*.mcr")) do appendIfNotFound foundOld f
-    -- (bien duoc dat o duoi; placeholder tren co tinh)
+    for f in (getFiles (umDir + "\NC_Render*.mcr")) do appendIfNotFound foundOld f
+    for f in (getFiles (umDir + "\NC_Render*.ms"))  do appendIfNotFound foundOld f
+    for f in (getFiles (umDir + "\_render_feedback*")) do appendIfNotFound foundOld f
 
-    -- 1b. python scripts cua install cu trong $uscripts
-    local us = getDir #userScripts
-    local knownStale = #("sd_generate.py", "sd_batch.py", "cuda_auto_install.py", "nc_cuda_render.py", "github_update.py", "_setup_download.py")
-    for staleName in knownStale do
+    local uninstFile = umDir + "\uninstall.ms"
+    if (doesFileExist uninstFile) then
     (
-        local fp = us + "\\" + staleName
-        if (doesFileExist fp) do appendIfNotFound foundOld fp
+        local fh = openFile uninstFile mode:"r"
+        if fh != undefined then
+        (
+            local txt = ""
+            while not (eof fh) do txt += readLine fh + "\n"
+            close fh
+            if (matchPattern txt pattern:"*NC-Render*") or (matchPattern txt pattern:"*NCRender*") then
+                appendIfNotFound foundOld uninstFile
+        )
     )
 
-    -- 1c. folder rac scripts\NC-Render
-    local ncFolder = us + "\\NC-Render"
-    if (doesFileExist (ncFolder + "\\")) do appendIfNotFound foundOld ncFolder
+    local us = getDir #userScripts
+    for f in (getFiles (us + "\sd_generate.py"))       do appendIfNotFound foundOld f
+    for f in (getFiles (us + "\sd_batch.py"))          do appendIfNotFound foundOld f
+    for f in (getFiles (us + "\cuda_auto_install.py")) do appendIfNotFound foundOld f
+    for f in (getFiles (us + "\nc_cuda_render.py"))    do appendIfNotFound foundOld f
+    for f in (getFiles (us + "\github_update.py"))     do appendIfNotFound foundOld f
+    for f in (getFiles (us + "\_setup_download.py"))   do appendIfNotFound foundOld f
 
-    -- 1d. icons cu
-    local icDir = getDir #userIcons
-    for f in (getFiles (icDir + "\\NC_Render_*.*")) do appendIfNotFound foundOld f
+    local ncFolder = us + "\NC-Render"
+    if (doesFileExist (ncFolder + "\")) do appendIfNotFound foundOld ncFolder
 
-    -- 1e. ApplicationPlugins package cu
-    local ap = @"C:\ProgramData\Autodesk\ApplicationPlugins\NC_Render_Standard"
-    if (doesFileExist (ap + "\\")) do appendIfNotFound foundOld ap
+    for f in (getFiles ((getDir #userIcons) + "\NC_Render_*.*")) do appendIfNotFound foundOld f
 
-    -- ===== 2. NEU CO BAN CU: HOI NGUOI DUNG =====
-    if (foundOld.count > 0) then
+    local apDir = @"C:\ProgramData\Autodesk\ApplicationPlugins\NC_Render_Standard"
+    if (doesFileExist (apDir + "\")) do appendIfNotFound foundOld apDir
+
+    -- ===== 2. QUYET DINH =====
+    if (foundOld.count == 0) then
     (
-        local msgOld = "Tim thay " + (foundOld.count as string) + " thanh phan cu:\n\n"
-        for f in foundOld do msgOld += "  " + f + "\n"
-
-        local choice = 0
-        createDialog rltNCPick width:470 height:240 title:"NC-Render - Phat hien ban cu"
-        rollout rltNCPick "Chon cach xu ly"
-        (
-            label lblMsg msgOld pos:[12, 24] width:440 height:90
-            button btnCleanInstall "Go cu + Cai lai ban moi" pos:[12, 150] width:440 height:30
-            button btnUninstallOnly "Chi go cu, khong cai" pos:[12, 184] width:440 height:26
-            button btnAbort "Huy" pos:[12, 212] width:440 height:22
-
-            on btnCleanInstall pressed do ( choice = 2; destroyDialog rltNCPick )
-            on btnUninstallOnly pressed do ( choice = 1; destroyDialog rltNCPick )
-            on btnAbort pressed do ( choice = 0; destroyDialog rltNCPick )
-        )
-
-        if (choice == 0) then
-        (
-            format "NC-Render: aborted by user, old files kept.\n"
-        )
-        else
-        (
-            -- go sach
-            local okCount = 0
-            for f in foundOld do
-            (
-                local ok = false
-                if (doesFileExist (f + "\\")) then
-                    ok = deleteDirectory f
-                else
-                    ok = deleteFile f
-                if ok do okCount += 1
-            )
-            macros.reload()
-
-            if (choice == 1) then
-            (
-                messageBox ("Da go " + (okCount as string) + " thanh phan cu.\nChua cai ban moi.") title:"NC-Render"
-            )
-            else if (choice == 2) then
-            (
-                -- cai ban moi
-                if (doesFileExist srcMcr) then
-                (
-                    copyFile srcMcr (umDir + "\\NC_Render_Bridge_v1.mcr")
-                    macros.reload()
-                    messageBox ("NC-Render AI Studio v1.4 cai dat thanh cong!\n\n(" + (okCount as string) + " file cu da duoc go sach)\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category 'NC-Render AI', keo button 'NC-Render v1' ra toolbar.") title:"NC-Render Install"
-                )
-                else
-                    messageBox ("Khong tim thay macroScript trong package:\n" + srcMcr) title:"NC-Render Install FAILED"
-            )
-        )
+        doInstall srcMcr (umDir + "\NC_Render_Bridge_v1.mcr")
     )
     else
     (
-        -- ===== 3. KHONG CO BAN CU: CAI THANG =====
-        if (doesFileExist srcMcr) then
+        local msgOld = "Phat hien " + (foundOld.count as string) + " thanh phan cu:\n\n"
+        for f in foundOld do msgOld += f + "\n"
+        msgOld += "\nBam [Co] = Go cu + Cai lai.\nBam [Khong] = Chi go, chua cai.\nBam Huy o goc tren = giu nguyen."
+
+        local doRemove = queryBox msgOld title:"NC-Render - Phat hien ban cu"
+        if doRemove then
         (
-            copyFile srcMcr (umDir + "\\NC_Render_Bridge_v1.mcr")
-            macros.reload()
-            messageBox "NC-Render AI Studio v1.4 cai dat thanh cong!\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category 'NC-Render AI', keo button 'NC-Render v1' ra toolbar." title:"NC-Render Install"
+            purgeOld foundOld
+            doInstall srcMcr (umDir + "\NC_Render_Bridge_v1.mcr")
         )
         else
-            messageBox ("Khong tim thay macroScript:\n" + srcMcr) title:"NC-Render Install FAILED"
+        (
+            messageBox ("Da go " + (foundOld.count as string) + " thanh phan cu.\nChua cai ban moi.") title:"NC-Render - Da go"
+        )
     )
 )
 '''
