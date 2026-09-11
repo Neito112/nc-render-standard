@@ -37,6 +37,9 @@ icon:#("NC_Render", 1)
     local pytorchCUDA = if config.count > 7 then config[8] else "false"
     // Python interpreter có CUDA — trỏ tới venv Hermes Agent
     local pythonBin = "C:/Users/HOMIE/AppData/Local/hermes/hermes-agent/venv/Scripts/python.exe"
+    -- Duong dan project goc (giu toan bo payload trong thu muc du an)
+    local ncPluginRoot = @"D:/Program/setup 3dsmax/Plugins/NC_Render_Standard"
+    local ncScriptsDir = ncPluginRoot + "/scripts/"
     
     // ============================================================
     // UI — Main rollout
@@ -76,7 +79,7 @@ icon:#("NC_Render", 1)
             try
             (
                 local statusFile = (getDir #temp) + "/nc_update_status.txt"
-                local pyScript = (getDir #max) + "/Plugins/NC_Render_Standard/scripts/github_update.py"
+                local pyScript = ncScriptsDir + "github_update.py"
                 // Gọi Python, redirect output ra file
                 local cmd = (pythonBin + " \"" + pyScript + "\" --check-only --current-version v1.0.0 --json > \"" + statusFile + "\"")
                 shellLaunch cmd
@@ -136,7 +139,7 @@ icon:#("NC_Render", 1)
             try
             (
                 local statusFile = (getDir #temp) + "/nc_update_status.txt"
-                local pyScript = (getDir #max) + "/Plugins/NC_Render_Standard/scripts/github_update.py"
+                local pyScript = ncScriptsDir + "github_update.py"
                 local userMacros = (getDir #userMacros)
                 local cmd = (pythonBin + " \"" + pyScript + "\" --download --current-version v1.0.0 --user-macros \"" + userMacros + "\" > \"" + statusFile + "\"")
                 shellLaunch cmd
@@ -653,7 +656,7 @@ icon:#("NC_Render", 1)
                         local finalPrompt = txtPrompt.text + " | " + scenePrompt
                         
                         // Gọi Python subprocess — sd_generate.py là wrapper duy nhất
-                        local pyScript = (getDir #max) + "/Plugins/NC_Render_Standard/scripts/sd_generate.py"
+                        local pyScript = ncScriptsDir + "sd_generate.py"
                         local cmd = (pythonBin + " \"" + pyScript + "\" --prompt \"" + finalPrompt + "\" --width " + (spnWidth.value as string) + " --height " + (spnHeight.value as string))
                         
                         if referenceImage != undefined do
@@ -802,7 +805,7 @@ icon:#("NC_Render", 1)
                         local scenePrompt = buildScenePrompt()
                         local finalPrompt = txtPrompt.text + " | " + scenePrompt
                         
-                        local pyScript = (getDir #max) + "/Plugins/NC_Render_Standard/scripts/sd_generate.py"
+                        local pyScript = ncScriptsDir + "sd_generate.py"
                         local cmd = (pythonBin + " \"" + pyScript + "\" --prompt \"" + finalPrompt + "\" --upscale " + (ddlUpscale.selection as string))
                         
                         if chkDetail.checked do cmd += " --detail"
@@ -951,7 +954,7 @@ icon:#("NC_Render", 1)
                         append variations (txtPrompt.text + " | golden hour | " + scenePrompt)
                         
                         // Gửi batch request
-                        local pyScript = (getDir #max) + "/Plugins/NC_Render_Standard/scripts/sd_batch.py"
+                        local pyScript = ncScriptsDir + "sd_batch.py"
                         local cmd = (pythonBin + " \"" + pyScript + "\" --prompts \"" + (arrayToCSV variations) + "\"")
                         
                         if referenceImage != undefined do
