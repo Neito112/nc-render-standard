@@ -92,7 +92,7 @@ clear temp on MAX exit
 
 # ============ run_install.ms — installer MaxScript that ============
 RUN_INSTALL = r'''
--- run_install.ms — NC-Render AI Studio v1.0.4 installer
+-- run_install.ms — NC-Render AI Studio v1.4 installer
 -- Chay sau khi mzp.run giai nen toan bo archive vào $temp\NCRender_install
 -- Nhiem vu: phat hien ban cu -> hoi go cai -> go -> cai ban moi.
 
@@ -111,9 +111,9 @@ RUN_INSTALL = r'''
     -- 1b. python scripts cua install cu trong $uscripts
     local us = getDir #userScripts
     local knownStale = #("sd_generate.py", "sd_batch.py", "cuda_auto_install.py", "nc_cuda_render.py", "github_update.py", "_setup_download.py")
-    for fn in knownStale do
+    for staleName in knownStale do
     (
-        local fp = us + "\\" + fn
+        local fp = us + "\\" + staleName
         if (doesFileExist fp) do appendIfNotFound foundOld fp
     )
 
@@ -179,7 +179,7 @@ RUN_INSTALL = r'''
                 (
                     copyFile srcMcr (umDir + "\\NC_Render_Bridge_v1.mcr")
                     macros.reload()
-                    messageBox ("NC-Render AI Studio v1.0.4 cai dat thanh cong!\n\n(" + (okCount as string) + " file cu da duoc go sach)\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category 'NC-Render AI', keo button 'NC-Render v1' ra toolbar.") title:"NC-Render Install"
+                    messageBox ("NC-Render AI Studio v1.4 cai dat thanh cong!\n\n(" + (okCount as string) + " file cu da duoc go sach)\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category 'NC-Render AI', keo button 'NC-Render v1' ra toolbar.") title:"NC-Render Install"
                 )
                 else
                     messageBox ("Khong tim thay macroScript trong package:\n" + srcMcr) title:"NC-Render Install FAILED"
@@ -193,7 +193,7 @@ RUN_INSTALL = r'''
         (
             copyFile srcMcr (umDir + "\\NC_Render_Bridge_v1.mcr")
             macros.reload()
-            messageBox "NC-Render AI Studio v1.0.4 cai dat thanh cong!\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category 'NC-Render AI', keo button 'NC-Render v1' ra toolbar." title:"NC-Render Install"
+            messageBox "NC-Render AI Studio v1.4 cai dat thanh cong!\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category 'NC-Render AI', keo button 'NC-Render v1' ra toolbar." title:"NC-Render Install"
         )
         else
             messageBox ("Khong tim thay macroScript:\n" + srcMcr) title:"NC-Render Install FAILED"
@@ -236,6 +236,12 @@ def main():
         ri = zf.read("run_install.ms")
         assert ri[:3] != b"\xef\xbb\xbf" and sum(1 for x in ri if x > 127) == 0, "run_install.ms BOM/non-ASCII!"
         assert not any(l.strip().startswith(b"//") for l in ri.splitlines()), "run_install.ms co // comment!"
+        # 'fn' la keyword dinh nghia ham cua MaxScript — dung lam bien vong lap = syntax crash ca file
+        _ri = ri.decode()
+        for _kw in ["fn", "do", "then", "on", "in", "of", "case", "with", "return", "exit", "true", "false", "undefined"]:
+            import re as _re2
+            assert not _re2.search(r"\bfor\s+" + _kw + r"\s+in\b", _ri), f"run_install.ms dung keyword '{_kw}' lam bien for-loop -> MaxScript syntax error!"
+            assert not _re2.search(r"\blocal\s+" + _kw + r"\s*=", _ri), f"run_install.ms dung keyword '{_kw}' lam bien local -> MaxScript syntax error!"
         mc = zf.read("usermacros/NC_Render_Bridge_v1.mcr")
         assert mc[:3] != b"\xef\xbb\xbf" and sum(1 for x in mc if x > 127) == 0, ".mcr BOM/non-ASCII!"
         assert not any(l.strip().startswith(b"//") for l in mc.splitlines()), ".mcr co // comment!"
