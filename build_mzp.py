@@ -1,25 +1,23 @@
 #!/usr/bin/env python3
 r"""
-build_mzp.py — Build NC_Render_Standard_v1.mzp TỰ NHIÊN TỪ PROJECT FOLDER.
+build_mzp.py — Build NC_Render_Standard_v1.mzp bản DRAG-AND-DROP thuần.
 
-Không copy gì vào thư mục 3ds Max. Người dùng tự kéo .mzp vào Max để cài.
+Tất cả file nằm trong thư mục dự án; .mzp chỉ là installer tối giản:
 
-Cơ chế:
-  1. Đọc source từ project (giữ nguyên tiếng Việt để dev dễ đọc)
-  2. SANITIZE on-the-fly khi đóng gói:
-       - bỏ UTF-8 BOM          (parser Max fail im lặng)
-       - // comment -> --      (MaxScript không nhận //)
-       - non-ASCII -> ASCII    (an toàn encoding)
-       - CRLF line endings
-  3. Đóng .mzp theo cấu trúc chuẩn ApplicationPlugins:
-       PackageContents.xml      (entry ĐẦU TIÊN)
-       Contents/startup/*.ms    (Max chạy mỗi lần khởi động, dùng @thisScript — không hardcode path)
-       Contents/usermacros/*.mcr
-       Contents/scripts/ Contents/skill/ Contents/usericons/
-       Contents/mzp.run Contents/install.ms
+    mzp.run                      <- root of zip, entry point (NO BOM, -- comments, ASCII)
+    install_info.ini             <- metadata
+    usermacros/NC_Render_Bridge_v1.mcr   <- payload macroScript (đã sanitize)
+    usermacros/uninstall.ms
+
+KHÔNG chứa PackageContents.xml — 2 package loader cùng có = silent conflict.
+
+mzp.run copy .mcr vào usermacros của Max, chạy macros.reload().
+Mọi payload Python/skill/icon KHÔNG cài đi đâu — macroScript trỏ thẳng
+về dự án qua ncPluginRoot đã hardcode trong .mcr.
+
+Chạy:  python3 build_mzp.py
+Sau đó: kéo NC_Render_Standard_v1.mzp thả vào cửa sổ 3ds Max.
 """
-import os
-import re
 import sys
 import unicodedata
 import zipfile
@@ -27,9 +25,6 @@ from pathlib import Path
 
 PLUGIN_ROOT = Path(r"D:/Program/setup 3dsmax/Plugins/NC_Render_Standard")
 OUTPUT = PLUGIN_ROOT / "NC_Render_Standard_v1.mzp"
-
-MAXSCRIPT_EXT = {".mcr", ".ms", ".run"}
-SKIP_EXT = (".safetensors", ".bin", ".pt")
 
 REPL = {
     "\u2014": "-", "\u2013": "-",
@@ -53,139 +48,89 @@ def to_ascii(text: str) -> str:
     return "".join(out)
 
 
-def sanitize_maxscript(text: str) -> str:
-    """BOM-stripped text (bytes->str đã decode) -> // thành --, ASCII, CRLF."""
+def sanitize(text: str) -> str:
+    """// comment -> --, ASCII-fold, CRLF, no BOM."""
     lines = []
-    for line in text.split("\n"):
+    for line in text.replace("\r\n", "\n").split("\n"):
         s = line.lstrip()
         if s.startswith("//"):
             line = line[: len(line) - len(s)] + "--" + s[2:]
         lines.append(line)
-    text = "\n".join(lines)
-    return to_ascii(text).replace("\r\n", "\n").replace("\n", "\r\n")
+    return to_ascii("\n".join(lines)).replace("\n", "\r\n")
 
 
-def read_bytes(p: Path) -> bytes:
+def read_clean(p: Path) -> str:
     d = p.read_bytes()
-    return d[3:] if d[:3] == b"\xef\xbb\xbf" else d
+    if d[:3] == b"\xef\xbb\xbf":
+        d = d[3:]
+    return d.decode("utf-8", errors="replace")
+
+
+# mzp.run — installer tối giản, tự định vị, có fallback về dự án
+MZR_RUN = r'''
+-- mzp.run -- NC-Render AI Studio v1.0.3 (drag-drop installer)
+-- Copy macroScript vao usermacros cua Max va reload.
+-- Payload (python scripts, skill, icons) nam lai trong thu muc du an.
+try
+(
+    local myDir = getFilenamePath @thisScript
+    local src = myDir + "usermacros\\NC_Render_Bridge_v1.mcr"
+
+    if (doesFileExist src) then
+    (
+        copyFile src ((getDir #usermacros) + "NC_Render_Bridge_v1.mcr")
+        macros.reload()
+        format "NC-Render: MacroScript v1.0.3 installed OK\n"
+        messageBox "NC-Render AI Studio v1.0.3 cai dat thanh cong!\n\nTim dang 'NC-Render' trong:\nCustomize > Customize User Interface > Toolbars\n(tab Custom, category NC-Render AI)" title:"NC-Render Install"
+    )
+    else
+        messageBox ("Khong tim thay macroScript:\n" + src) title:"NC-Render Install FAILED"
+)
+catch (messageBox ("Loi cai dat: " + (getCurrentException() as string)) title:"NC-Render Install ERROR")
+'''
+
+INSTALL_INFO = """\
+[Application]
+Friendly name=NC-Render AI Studio
+Version=1.0
+Developer name=Neito
+More info URL = https://github.com/Neito112/nc-render-standard
+"""
 
 
 def main():
-    print("=== Build .mzp tu project (sanitize on-the-fly) ===")
-
-    # --- PackageContents.xml sinh trực tiếp ở đây, nhất quán với cấu trúc zip ---
-    pkg_xml = (
-        '<?xml version="1.0" encoding="utf-8"?>\n'
-        '<ApplicationPackage SchemaVersion="1.0"\n'
-        '        AutodeskProduct="3ds Max" ProductType="Application"\n'
-        '        Name="NC_Render_Standard"\n'
-        '        AppVersion="1.0.3"\n'
-        '        Author="Neito"\n'
-        '        ProductCode="{a3f1c2d4-5b6e-47f8-9a0b-c1d2e3f4a5b6}"\n'
-        '        UpgradeCode="{b4e2d3f5-6c7f-4809-ab1c-d2e3f4a5b6c7}">\n'
-        '    <CompanyDetails Name="Neito" />\n'
-        '    <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2024" SeriesMax="2027" />\n'
-        '    <Components Description="startup script parts">\n'
-        '        <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2024" SeriesMax="2027" />\n'
-        '        <ComponentEntry AppName="NCRenderStartup" ModuleName="./Contents/startup/nc_render_startup.ms" />\n'
-        '    </Components>\n'
-        '    <Components Description="macroscript parts">\n'
-        '        <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2024" SeriesMax="2027" />\n'
-        '        <ComponentEntry AppName="NCRenderMacros" ModuleName="./Contents/usermacros" />\n'
-        '    </Components>\n'
-        '    <Components Description="resource parts">\n'
-        '        <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2024" SeriesMax="2027" />\n'
-        '        <ComponentEntry AppName="NCRenderResources" ModuleName="./Contents/scripts" />\n'
-        '        <ComponentEntry AppName="NCRenderSkill" ModuleName="./Contents/skill" />\n'
-        '        <ComponentEntry AppName="NCRenderIcons" ModuleName="./Contents/usericons" />\n'
-        '    </Components>\n'
-        '</ApplicationPackage>\n'
-    )
-
-    # --- Startup script chỉ copy .mcr vào usermacros; payload Python nằm lại project ---
-    startup_ms = (
-        '-- nc_render_startup.ms -- NC-Render AI Studio v1.0.3\n'
-        '-- Copy macroScript vao usermacros cua Max (payload van nam trong project).\n'
-        'try\n'
-        '(\n'
-        '    local src = @"D:/Program/setup 3dsmax/Plugins/NC_Render_Standard/usermacros/NC_Render_Bridge_v1.mcr"\n'
-        '    local dst = (getDir #usermacros) + "NC_Render_Bridge_v1.mcr"\n'
-        '\n'
-        '    if (doesFileExist src) then\n'
-        '    (\n'
-        '        copyFile src dst\n'
-        '        macros.reload()\n'
-        '        format "NC-Render: MacroScript v1.0.3 installed to usermacros\\n"\n'
-        '    )\n'
-        '    else\n'
-        '        format "NC-Render: WARNING - macroScript not found at %\\n" src\n'
-        ')\n'
-        'catch (format "NC-Render: startup error: %\\n" (getCurrentException()))\n'
-    )
+    src_mcr = PLUGIN_ROOT / "usermacros" / "NC_Render_Bridge_v1.mcr"
+    src_uninstall = PLUGIN_ROOT / "usermacros" / "uninstall.ms"
+    for p in (src_mcr, src_uninstall):
+        if not p.exists():
+            print(f"X thieu file: {p}")
+            sys.exit(1)
 
     if OUTPUT.exists():
         OUTPUT.unlink()
 
-    added = []
     with zipfile.ZipFile(OUTPUT, "w", zipfile.ZIP_DEFLATED) as zf:
-        # 1. PackageContents.xml DAU TIEN
-        zf.writestr("PackageContents.xml", pkg_xml.replace("\n", "\r\n"))
-        added.append("PackageContents.xml")
+        zf.writestr("mzp.run", sanitize(MZR_RUN))
+        zf.writestr("install_info.ini", INSTALL_INFO)
+        zf.writestr("usermacros/NC_Render_Bridge_v1.mcr", sanitize(read_clean(src_mcr)))
+        zf.writestr("usermacros/uninstall.ms", sanitize(read_clean(src_uninstall)))
 
-        # 2. Startup script (dat canh usermacros de @thisScript tro thang file .mcr)
-        zf.writestr("Contents/usermacros/NC_Render_Bridge_v1.mcr",
-                    sanitize_maxscript(read_bytes(PLUGIN_ROOT / "usermacros" / "NC_Render_Bridge_v1.mcr").decode("utf-8")))
-        zf.writestr("Contents/usermacros/uninstall.ms",
-                    sanitize_maxscript(read_bytes(PLUGIN_ROOT / "usermacros" / "uninstall.ms").decode("utf-8")))
-        zf.writestr("Contents/startup/nc_render_startup.ms", startup_ms.replace("\n", "\r\n"))
-        added += ["Contents/usermacros/NC_Render_Bridge_v1.mcr",
-                  "Contents/usermacros/uninstall.ms",
-                  "Contents/startup/nc_render_startup.ms"]
+    # Verify sau khi dong zip: khong BOM, ASCII, khong //, khong PackageContents.xml
+    with zipfile.ZipFile(OUTPUT) as zf:
+        names = zf.namelist()
+        assert "PackageContents.xml" not in names, "Co PackageContents.xml = conflict!"
+        assert "mzp.run" in names, "Thieu mzp.run!"
+        for n in names:
+            b = zf.read(n)
+            assert b[:3] != b"\xef\xbb\xbf", f"BOM trong {n}!"
+            if n.endswith((".run", ".mcr", ".ms", ".ini")):
+                assert sum(1 for x in b if x > 127) == 0, f"non-ASCII trong {n}!"
+                assert not any(l.strip().startswith(b"//") for l in b.splitlines()), f"// comment trong {n}!"
 
-        # 3. Legacy installer files
-        for name in ["mzp.run", "install.ms"]:
-            p = PLUGIN_ROOT / name
-            if p.exists():
-                zf.writestr("Contents/" + name,
-                            sanitize_maxscript(read_bytes(p).decode("utf-8")))
-                added.append("Contents/" + name)
-
-        # 4. Resources: scripts/, skill/ (bo weights), usericons/
-        for sub in ["scripts", "skill", "usericons"]:
-            root_dir = PLUGIN_ROOT / sub
-            if not root_dir.exists():
-                print(f"! {sub}/ not found, skip")
-                continue
-            for root, dirs, files in os.walk(root_dir):
-                dirs[:] = [d for d in dirs if d != "__pycache__"]
-                for fn in sorted(files):
-                    full = Path(root) / fn
-                    if full.suffix in SKIP_EXT:
-                        continue
-                    arc = sub + "/" + full.relative_to(root_dir).as_posix()
-                    if full.suffix in MAXSCRIPT_EXT or fn == "mzp.run":
-                        zf.writestr("Contents/" + arc,
-                                    sanitize_maxscript(read_bytes(full).decode("utf-8")))
-                    else:
-                        zf.write(full, "Contents/" + arc)
-                    added.append("Contents/" + arc)
-
-    # 5. Verify (đọc lại sau khi đóng zip)
-    with zipfile.ZipFile(OUTPUT) as zf_check:
-        for check_name in ["PackageContents.xml",
-                           "Contents/startup/nc_render_startup.ms",
-                           "Contents/mzp.run",
-                           "Contents/usermacros/NC_Render_Bridge_v1.mcr"]:
-            data = zf_check.read(check_name)
-            assert data[:3] != b"\xef\xbb\xbf", f"BOM trong {check_name}!"
-            bad = sum(1 for x in data if x > 127)
-            assert bad == 0, f"non-ASCII trong {check_name}: {bad}"
-            assert not any(l.strip().startswith(b"//") for l in data.splitlines()), f"// comment trong {check_name}!"
-
-    print(f"\nOK: {OUTPUT}")
-    print(f"   {len(added)} files, {OUTPUT.stat().st_size/1024:.0f} KB")
-    print("   Verify: khong BOM, pure ASCII, chi dung -- comment")
-    print("\n   -> keo tha NC_Render_Standard_v1.mzp vao 3ds Max de cai.")
+    print(f"OK: {OUTPUT}")
+    print(f"   {len(names)} files, {OUTPUT.stat().st_size/1024:.0f} KB: {names}")
+    print("   Verify: mzp.run root, KHONG PackageContents.xml, khong BOM/ASCII/// comment")
+    print("   -> keo tha NC_Render_Standard_v1.mzp vao cua so 3ds Max.")
 
 
 if __name__ == "__main__":
