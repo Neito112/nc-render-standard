@@ -1,22 +1,32 @@
 #!/usr/bin/env python3
 r"""
-build_mzp.py — Build NC_Render_Standard_v1.mzp bản DRAG-AND-DROP thuần.
+build_mzp.py — Build NC_Render_Standard_v1.mzp theo ĐÚNG format drag-drop thật.
 
-Tất cả file nằm trong thư mục dự án; .mzp chỉ là installer tối giản:
+BÀI HỌC LỚN (từ 4 .mzp mẫu chạy được trên máy: PruneScene, CollectAsset,
+Dabarti, PasteRefImage):  mzp.run KHÔNG PHẢI MaxScript! Nó là file DIRECTIVE
+dạng text thuần để Max Engine parse:
 
-    mzp.run                      <- root of zip, entry point (NO BOM, -- comments, ASCII)
-    install_info.ini             <- metadata
-    usermacros/NC_Render_Bridge_v1.mcr   <- payload macroScript (đã sanitize)
-    usermacros/uninstall.ms
+    name "..."              <- bắt buộc
+    version ...             <- bắt buộc
+    description "..."
+    extract to "$temp\\MyPlugin"   <- giải nén cả archive vào đây
+    drop "run_installer.ms"        <- file mzp không coi là script rơi
+    run "run_installer.ms"         <- chạy script cài đặt (MaxScript THẬT)
+    clear temp on MAX exit
 
-KHÔNG chứa PackageContents.xml — 2 package loader cùng có = silent conflict.
+Mọi logic (dialog setup, detect bản cũ, gỡ/cài) nằm trong run_install.ms.
 
-mzp.run copy .mcr vào usermacros của Max, chạy macros.reload().
-Mọi payload Python/skill/icon KHÔNG cài đi đâu — macroScript trỏ thẳng
-về dự án qua ncPluginRoot đã hardcode trong .mcr.
+File zip:
+    mzp.run                              (root, directives)
+    run_install.ms                       (root, MaxScript installer)
+    usermacros/NC_Render_Bridge_v1.mcr   (payload sanitized)
+
+KHÔNG chứa PackageContents.xml (conflict 2 loader).
+KHÔNG copy gì vào thư mục Max ngoài ý người dùng — installer chỉ hỏi,
+người dùng bấm mới ghi.
 
 Chạy:  python3 build_mzp.py
-Sau đó: kéo NC_Render_Standard_v1.mzp thả vào cửa sổ 3ds Max.
+Cài :  kéo NC_Render_Standard_v1.mzp thả vào cửa sổ 3ds Max.
 """
 import sys
 import unicodedata
@@ -48,8 +58,8 @@ def to_ascii(text: str) -> str:
     return "".join(out)
 
 
-def sanitize(text: str) -> str:
-    """// comment -> --, ASCII-fold, CRLF, no BOM."""
+def sanitize_ms(text: str) -> str:
+    """MaxScript: // -> --, ASCII-fold, CRLF, khong BOM."""
     lines = []
     for line in text.replace("\r\n", "\n").split("\n"):
         s = line.lstrip()
@@ -66,71 +76,164 @@ def read_clean(p: Path) -> str:
     return d.decode("utf-8", errors="replace")
 
 
-# mzp.run — installer tối giản, tự định vị, có fallback về dự án
-MZR_RUN = r'''
--- mzp.run -- NC-Render AI Studio v1.0.3 (drag-drop installer)
--- Copy macroScript vao usermacros cua Max va reload.
--- Payload (python scripts, skill, icons) nam lai trong thu muc du an.
-try
-(
-    local myDir = getFilenamePath @thisScript
-    local src = myDir + "usermacros\\NC_Render_Bridge_v1.mcr"
+# ============ mzp.run — DIRECTIVES, khong phai MaxScript ============
+MZR_RUN = """name "NC-Render AI Studio"
+version 1.0.4
+description "CUDA concept render for 3ds Max 2024"
+extract to "$temp\\NCRender_install"
+drop "run_install.ms"
+run "run_install.ms"
+clear temp on MAX exit
+"""
 
-    if (doesFileExist src) then
+# ============ run_install.ms — installer MaxScript that ============
+RUN_INSTALL = r'''
+-- run_install.ms — NC-Render AI Studio v1.0.4 installer
+-- Chay sau khi mzp.run giai nen toan bo archive vào $temp\NCRender_install
+-- Nhiem vu: phat hien ban cu -> hoi go cai -> go -> cai ban moi.
+
+(
+    local thisDir = getFilenamePath (getThisScriptFilename())
+    local srcMcr = thisDir + "usermacros\\NC_Render_Bridge_v1.mcr"
+
+    -- ===== 1. QUET BAN CU =====
+    local foundOld = #()
+
+    -- 1a. usermacros: moi thu mang ten NC_Render
+    local umDir = getDir #usermacros
+    for f in (getFiles (umDir + "\\NC_Render*.mcr")) do appendIfNotFound foundOld f
+    -- (bien duoc dat o duoi; placeholder tren co tinh)
+
+    -- 1b. python scripts cua install cu trong $uscripts
+    local us = getDir #userScripts
+    local knownStale = #("sd_generate.py", "sd_batch.py", "cuda_auto_install.py", "nc_cuda_render.py", "github_update.py", "_setup_download.py")
+    for fn in knownStale do
     (
-        copyFile src ((getDir #usermacros) + "NC_Render_Bridge_v1.mcr")
-        macros.reload()
-        format "NC-Render: MacroScript v1.0.3 installed OK\n"
-        messageBox "NC-Render AI Studio v1.0.3 cai dat thanh cong!\n\nTim dang 'NC-Render' trong:\nCustomize > Customize User Interface > Toolbars\n(tab Custom, category NC-Render AI)" title:"NC-Render Install"
+        local fp = us + "\\" + fn
+        if (doesFileExist fp) do appendIfNotFound foundOld fp
+    )
+
+    -- 1c. folder rac scripts\NC-Render
+    local ncFolder = us + "\\NC-Render"
+    if (doesFileExist (ncFolder + "\\")) do appendIfNotFound foundOld ncFolder
+
+    -- 1d. icons cu
+    local icDir = getDir #userIcons
+    for f in (getFiles (icDir + "\\NC_Render_*.*")) do appendIfNotFound foundOld f
+
+    -- 1e. ApplicationPlugins package cu
+    local ap = @"C:\ProgramData\Autodesk\ApplicationPlugins\NC_Render_Standard"
+    if (doesFileExist (ap + "\\")) do appendIfNotFound foundOld ap
+
+    -- ===== 2. NEU CO BAN CU: HOI NGUOI DUNG =====
+    if (foundOld.count > 0) then
+    (
+        local msgOld = "Tim thay " + (foundOld.count as string) + " thanh phan cu:\n\n"
+        for f in foundOld do msgOld += "  " + f + "\n"
+
+        local choice = 0
+        createDialog rltNCPick width:470 height:240 title:"NC-Render - Phat hien ban cu"
+        rollout rltNCPick "Chon cach xu ly"
+        (
+            label lblMsg msgOld pos:[12, 24] width:440 height:90
+            button btnCleanInstall "Go cu + Cai lai ban moi" pos:[12, 150] width:440 height:30
+            button btnUninstallOnly "Chi go cu, khong cai" pos:[12, 184] width:440 height:26
+            button btnAbort "Huy" pos:[12, 212] width:440 height:22
+
+            on btnCleanInstall pressed do ( choice = 2; destroyDialog rltNCPick )
+            on btnUninstallOnly pressed do ( choice = 1; destroyDialog rltNCPick )
+            on btnAbort pressed do ( choice = 0; destroyDialog rltNCPick )
+        )
+
+        if (choice == 0) then
+        (
+            format "NC-Render: aborted by user, old files kept.\n"
+        )
+        else
+        (
+            -- go sach
+            local okCount = 0
+            for f in foundOld do
+            (
+                local ok = false
+                if (doesFileExist (f + "\\")) then
+                    ok = deleteDirectory f
+                else
+                    ok = deleteFile f
+                if ok do okCount += 1
+            )
+            macros.reload()
+
+            if (choice == 1) then
+            (
+                messageBox ("Da go " + (okCount as string) + " thanh phan cu.\nChua cai ban moi.") title:"NC-Render"
+            )
+            else if (choice == 2) then
+            (
+                -- cai ban moi
+                if (doesFileExist srcMcr) then
+                (
+                    copyFile srcMcr (umDir + "\\NC_Render_Bridge_v1.mcr")
+                    macros.reload()
+                    messageBox ("NC-Render AI Studio v1.0.4 cai dat thanh cong!\n\n(" + (okCount as string) + " file cu da duoc go sach)\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category 'NC-Render AI', keo button 'NC-Render v1' ra toolbar.") title:"NC-Render Install"
+                )
+                else
+                    messageBox ("Khong tim thay macroScript trong package:\n" + srcMcr) title:"NC-Render Install FAILED"
+            )
+        )
     )
     else
-        messageBox ("Khong tim thay macroScript:\n" + src) title:"NC-Render Install FAILED"
+    (
+        -- ===== 3. KHONG CO BAN CU: CAI THANG =====
+        if (doesFileExist srcMcr) then
+        (
+            copyFile srcMcr (umDir + "\\NC_Render_Bridge_v1.mcr")
+            macros.reload()
+            messageBox "NC-Render AI Studio v1.0.4 cai dat thanh cong!\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category 'NC-Render AI', keo button 'NC-Render v1' ra toolbar." title:"NC-Render Install"
+        )
+        else
+            messageBox ("Khong tim thay macroScript:\n" + srcMcr) title:"NC-Render Install FAILED"
+    )
 )
-catch (messageBox ("Loi cai dat: " + (getCurrentException() as string)) title:"NC-Render Install ERROR")
 '''
-
-INSTALL_INFO = """\
-[Application]
-Friendly name=NC-Render AI Studio
-Version=1.0
-Developer name=Neito
-More info URL = https://github.com/Neito112/nc-render-standard
-"""
 
 
 def main():
     src_mcr = PLUGIN_ROOT / "usermacros" / "NC_Render_Bridge_v1.mcr"
-    src_uninstall = PLUGIN_ROOT / "usermacros" / "uninstall.ms"
-    for p in (src_mcr, src_uninstall):
-        if not p.exists():
-            print(f"X thieu file: {p}")
-            sys.exit(1)
+    if not src_mcr.exists():
+        print(f"X thieu {src_mcr}")
+        sys.exit(1)
 
     if OUTPUT.exists():
         OUTPUT.unlink()
 
     with zipfile.ZipFile(OUTPUT, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("mzp.run", sanitize(MZR_RUN))
-        zf.writestr("install_info.ini", INSTALL_INFO)
-        zf.writestr("usermacros/NC_Render_Bridge_v1.mcr", sanitize(read_clean(src_mcr)))
-        zf.writestr("usermacros/uninstall.ms", sanitize(read_clean(src_uninstall)))
+        zf.writestr("mzp.run", MZR_RUN.replace("\n", "\r\n"))          # directives thuan
+        zf.writestr("run_install.ms", sanitize_ms(RUN_INSTALL))         # MaxScript sanitized
+        zf.writestr("usermacros/NC_Render_Bridge_v1.mcr", sanitize_ms(read_clean(src_mcr)))
 
-    # Verify sau khi dong zip: khong BOM, ASCII, khong //, khong PackageContents.xml
+    # Verify
     with zipfile.ZipFile(OUTPUT) as zf:
         names = zf.namelist()
-        assert "PackageContents.xml" not in names, "Co PackageContents.xml = conflict!"
-        assert "mzp.run" in names, "Thieu mzp.run!"
-        for n in names:
-            b = zf.read(n)
-            assert b[:3] != b"\xef\xbb\xbf", f"BOM trong {n}!"
-            if n.endswith((".run", ".mcr", ".ms", ".ini")):
-                assert sum(1 for x in b if x > 127) == 0, f"non-ASCII trong {n}!"
-                assert not any(l.strip().startswith(b"//") for l in b.splitlines()), f"// comment trong {n}!"
+        assert "PackageContents.xml" not in names
+        assert names[0] == "mzp.run", "mzp.run phai la entry dau tien"
+        run = zf.read("mzp.run")
+        assert run[:3] != b"\xef\xbb\xbf", "mzp.run co BOM!"
+        assert run.startswith(b'name "'), f"mzp.run phai bat dau bang directive name: {run[:20]!r}"
+        for kw in [b"extract to", b"drop", b"run "]:
+            assert kw in run, f"mzp.run thieu directive {kw!r}"
+        ri = zf.read("run_install.ms")
+        assert ri[:3] != b"\xef\xbb\xbf" and sum(1 for x in ri if x > 127) == 0, "run_install.ms BOM/non-ASCII!"
+        assert not any(l.strip().startswith(b"//") for l in ri.splitlines()), "run_install.ms co // comment!"
+        mc = zf.read("usermacros/NC_Render_Bridge_v1.mcr")
+        assert mc[:3] != b"\xef\xbb\xbf" and sum(1 for x in mc if x > 127) == 0, ".mcr BOM/non-ASCII!"
+        assert not any(l.strip().startswith(b"//") for l in mc.splitlines()), ".mcr co // comment!"
 
     print(f"OK: {OUTPUT}")
     print(f"   {len(names)} files, {OUTPUT.stat().st_size/1024:.0f} KB: {names}")
-    print("   Verify: mzp.run root, KHONG PackageContents.xml, khong BOM/ASCII/// comment")
-    print("   -> keo tha NC_Render_Standard_v1.mzp vao cua so 3ds Max.")
+    print("   mzp.run = DIRECTIVES (name/extract/drop/run) — khop dinh dang 4 .mzp mau")
+    print("   Verify: entry dau = mzp.run, khong BOM, ASCII, -- comments, khong PackageContents.xml")
+    print("   -> keo tha file .mzp vao cua so 3ds Max.")
 
 
 if __name__ == "__main__":
