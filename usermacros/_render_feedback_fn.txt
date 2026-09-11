@@ -1,0 +1,119 @@
+        // ============================================================
+        // RENDER WITH FEEDBACK — File-based JSON communication
+        // Cho phép 3ds Max biết kết quả render từ Python script
+        // Flow: viết input JSON → shellLaunch sd_generate.py → polling output JSON → cập nhật UI
+        // ============================================================
+        fn renderWithFeedback inputJPath outputJPath =
+        (
+            lblStatus.text = "Đang prepare render..."
+            
+            // 1. Gọi Python script với JSON I/O
+            local pyScript = (getDir #max) + "/Plugins/NC_Render_Standard/scripts/sd_generate.py"
+            local cmd = "python3 \"" + pyScript + "\" --input-json \"" + inputJPath + "\" --output-json \"" + outputJPath + "\""
+            
+            lblStatus.text = "Running: " + cmd
+            shellLaunch cmd
+            
+            // 2. Polling loop để chờ kết quả
+            local startTime = timeStamp()
+            local timeoutSec = 600  // 10 phút timeout
+            local pollInterval = 500  // 500ms giữa các lần kiểm tra
+            local elapsed = 0
+            
+            while elapsed < timeoutSec do
+            (
+                sleep pollInterval
+                elapsed = (timeStamp() - startTime) / 1000.0
+                
+                // Kiểm tra file output JSON đã tạo chưa
+                if doesFileExist outputJPath do
+                (
+                    // Đọc JSON output
+                    local f = openFile outputJPath
+                    local outputContent = ""
+                    while not eof f do
+                    (
+                        append outputContent (readLine f)
+                    )
+                    close f
+                    
+                    // Parse JSON (đơn giản — tách status và output_path)
+                    local status = ""
+                    local outputPath = ""
+                    local inferenceTime = 0
+                    
+                    // Tìm status
+                    local statusPos = findString outputContent "status"
+                    if statusPos != undefined do
+                    (
+                        local lineStart = (getLineNum outputContent statusPos)
+                        // Đọc vài dòng sau status để lấy giá trị
+                    )
+                    
+                    // Cách đơn giản hơn: đọc từng dòng và tìm các trường quan trọng
+                    local lines = (filterString outputContent "\n")
+                    for line in lines do
+                    (
+                        if (findString line "status") != undefined do
+                        (
+                            local valStart = (findString line ":") + 2
+                            if valStart != undefined and valStart <= line.count do
+                                status = (trim (substring line valStart (line.count - valStart)))
+                        )
+                        if (findString line "output_path") != undefined do
+                        (
+                            local valStart = (findString line ":") + 2
+                            if valStart != undefined and valStart <= line.count do
+                                outputPath = (trim (substring line valStart (line.count - valStart)))
+                        )
+                        if (findString line "inference_time") != undefined do
+                        (
+                            local valStart = (findString line ":") + 1
+                            if valStart != undefined and valStart <= line.count do
+                            (
+                                local valStr = (trim (substring line valStart (line.count - valStart)))
+                                try (inferenceTime = valStr as float) catch ()
+                            )
+                        )
+                    )
+                    
+                    // Cập nhật UI dựa trên kết quả
+                    if status == "success" do
+                    (
+                        lblStatus.text = "Render xong (" + (inferenceTime as string) + "s)"
+                        
+                        // Cập nhật preview bitmap nếu có output_path
+                        if outputPath != "" and doesFileExist outputPath do
+                        (
+                            try
+                            (
+                                local bmp = openBitmap outputPath
+                                if bmp != undefined do
+                                (
+                                    uiPreview.bitmap = bmp
+                                    lblStatus.text = lblStatus.text + " — đã cập nhật preview"
+                                )
+                            )
+                            catch (lblStatus.text = lblStatus.text + " (lỗi load bitmap)")
+                        )
+                        
+                        // Cleanup temp files
+                        if doesFileExist inputJPath do (deleteFile inputJPath)
+                        if doesFileExist outputJPath do (deleteFile outputJPath)
+                        
+                        return true
+                    )
+                    else if status == "failed" do
+                    (
+                        lblStatus.text = "Render thất bại"
+                        if doesFileExist inputJPath do (deleteFile inputJPath)
+                        if doesFileExist outputJPath do (deleteFile outputJPath)
+                        return false
+                    )
+                )
+            )
+            
+            // Timeout
+            lblStatus.text = "Render timeout (" + (elapsed as string) + "s) — kiểm tra Python console"
+            return false
+        )

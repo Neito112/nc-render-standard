@@ -1,0 +1,32 @@
+# NC-Render AI Studio — Git Ignore
+# Package file (dễ rebuild, không cần commit)
+*.mzp
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Model weights (tải tự động qua setup)
+skill/cuda-render-style/models/sd15/*.safetensors
+skill/cuda-render-style/models/sd15/*.bin
+
+# Temp files
+*.log
+*.tmp
+*.bak
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Config file mà user tạo ra (không commit)
+nc_render_config.txt
