@@ -77,8 +77,12 @@ def read_clean(p: Path) -> str:
 
 
 # ============ mzp.run — DIRECTIVES, khong phai MaxScript ============
+# QUAN TRONG: "version" la SO (number token), KHONG duoc co 2 dau cham.
+# "1.0.4" lam parser Max abort toan bo file -> "Failed to load .mzp".
+# Cac .mzp mau chay duoc chi dung: khong co version (PruneScene), hoac
+# 1 dau cham (Dabarti "0.901", CollectAsset "2.099"). Dung "1.4" o day.
 MZR_RUN = """name "NC-Render AI Studio"
-version 1.0.4
+version 1.4
 description "CUDA concept render for 3ds Max 2024"
 extract to "$temp\\NCRender_install"
 drop "run_install.ms"
@@ -222,6 +226,13 @@ def main():
         assert run.startswith(b'name "'), f"mzp.run phai bat dau bang directive name: {run[:20]!r}"
         for kw in [b"extract to", b"drop", b"run "]:
             assert kw in run, f"mzp.run thieu directive {kw!r}"
+        # "version" phai la so voi TOI DA 1 dau cham (Max parser doc nhu number literal)
+        import re as _re
+        vm = _re.search(rb"version\s+(\S+)", run)
+        if vm:
+            vtok = vm.group(1).decode()
+            assert vtok.count(".") <= 1, f"mzp.run 'version {vtok}' co qua 1 dau cham -> Max parser abort (Failed to load .mzp)!"
+            assert _re.fullmatch(r"[0-9]+(\.[0-9]+)?", vtok), f"mzp.run 'version {vtok}' khong phai so hop le!"
         ri = zf.read("run_install.ms")
         assert ri[:3] != b"\xef\xbb\xbf" and sum(1 for x in ri if x > 127) == 0, "run_install.ms BOM/non-ASCII!"
         assert not any(l.strip().startswith(b"//") for l in ri.splitlines()), "run_install.ms co // comment!"
