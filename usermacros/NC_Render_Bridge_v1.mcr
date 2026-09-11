@@ -62,6 +62,132 @@ icon:#("NC_Render", 1)
         
         label lblStatus "Trạng thái renderer: " + renderMethod pos:[20, 108] width:320
         
+        // SECTION UPDATE: Kiểm tra cập nhật plugin
+        groupBox grpUpdate " Plugin Update " pos:[10, 115] width:340 height:110
+        label lblUpdateInfo "Phiên bản hiện tại: v1.0.0" pos:[20, 130] width:320
+        button btnCheckUpdate "🔍 Kiểm tra cập nhật" pos:[20, 155] width:320 height:22
+        label lblUpdateStatus "" pos:[20, 182] width:320 height:18 style_sunkenedge:true
+        button btnDoUpdate "⬇ Tải & Cài đặt" pos:[20, 205] width:320 height:22 enabled:false
+        
+        on btnCheckUpdate pressed do
+        (
+            lblUpdateStatus.text = "Đang kiểm tra..."
+            btnDoUpdate.enabled = false
+            try
+            (
+                local statusFile = (getDir #temp) + "/nc_update_status.txt"
+                local pyScript = (getDir #max) + "/Plugins/NC_Render_Standard/scripts/github_update.py"
+                // Gọi Python, redirect output ra file
+                local cmd = (pythonBin + " \"" + pyScript + "\" --check-only --current-version v1.0.0 --json > \"" + statusFile + "\"")
+                shellLaunch cmd
+                // Đợi process kết thúc (timeout 15s)
+                local waited = 0
+                while not doesFileExist statusFile and waited < 15 do
+                (
+                    sleep 1
+                    waited += 1
+                )
+                if doesFileExist statusFile do
+                (
+                    local f = openFile statusFile
+                    local content = ""
+                    while not eof f do content += (readLine f) + "\n"
+                    close f
+                    // Parse simple: kiểm tra keywords trong output JSON
+                    if content contains "up_to_date" and content contains "true" do
+                    (
+                        lblUpdateStatus.text = "✅ Bạn đang dùng phiên bản mới nhất"
+                        btnDoUpdate.enabled = false
+                    )
+                    else if content contains "update_available" and content contains "true" do
+                    (
+                        lblUpdateStatus.text = "📦 CÓ bản cập nhật — nhấn \"Tải & Cài đặt\""
+                        btnDoUpdate.enabled = true
+                    )
+                    else if content contains "error" do
+                    (
+                        lblUpdateStatus.text = "⚠️ Lỗi kiểm tra — kiểm tra mạng hoặc GitHub API"
+                        btnDoUpdate.enabled = false
+                    )
+                    else
+                    (
+                        lblUpdateStatus.text = "⚠️ Không thể đọc kết quả — thử lại"
+                        btnDoUpdate.enabled = false
+                    )
+                )
+                else
+                (
+                    lblUpdateStatus.text = "⚠️ Không thể kết nối GitHub API (timeout)"
+                    btnDoUpdate.enabled = false
+                )
+            )
+            catch
+            (
+                lblUpdateStatus.text = "Lỗi: " + (getExceptionString() as string)
+                btnDoUpdate.enabled = false
+            )
+        )
+        
+        on btnDoUpdate pressed do
+        (
+            lblUpdateStatus.text = "Đang tải bản cập nhật..."
+            btnDoUpdate.enabled = false
+            btnCheckUpdate.enabled = false
+            try
+            (
+                local statusFile = (getDir #temp) + "/nc_update_status.txt"
+                local pyScript = (getDir #max) + "/Plugins/NC_Render_Standard/scripts/github_update.py"
+                local userMacros = (getDir #userMacros)
+                local cmd = (pythonBin + " \"" + pyScript + "\" --download --current-version v1.0.0 --user-macros \"" + userMacros + "\" > \"" + statusFile + "\"")
+                shellLaunch cmd
+                // Đợi cấp tải完 (up to 60s)
+                local waited = 0
+                while not doesFileExist statusFile and waited < 60 do
+                (
+                    sleep 1
+                    waited += 1
+                )
+                if doesFileExist statusFile do
+                (
+                    local f = openFile statusFile
+                    local content = ""
+                    while not eof f do content += (readLine f) + "\n"
+                    close f
+                    if content contains "updated" and content contains "true" do
+                    (
+                        lblUpdateStatus.text = "✅ Cập nhật thành công — khởi động lại 3ds Max để áp dụng"
+                        btnDoUpdate.enabled = false
+                        btnCheckUpdate.enabled = false
+                    )
+                    else if content contains "error" do
+                    (
+                        lblUpdateStatus.text = "❌ Lỗi cập nhật — xem log"
+                        btnCheckUpdate.enabled = true
+                    )
+                    else if content contains "up_to_date" do
+                    (
+                        lblUpdateStatus.text = "ℹ️ Không có bản cập nhật mới"
+                        btnCheckUpdate.enabled = true
+                    )
+                    else
+                    (
+                        lblUpdateStatus.text = "⚠️ Không đọc được kết quả — kiểm tra lại"
+                        btnCheckUpdate.enabled = true
+                    )
+                )
+                else
+                (
+                    lblUpdateStatus.text = "❌ Timeout — tải bản cập nhật thất bại"
+                    btnCheckUpdate.enabled = true
+                )
+            )
+            catch
+            (
+                lblUpdateStatus.text = "Lỗi: " + (getExceptionString() as string)
+                btnCheckUpdate.enabled = true
+            )
+        )
+        
         // SECTION 2: CAMERA & FRAME
         groupBox grpCam " Camera & Frame " pos:[10, 120] width:340 height:95
         dropdownList ddlCams "" pos:[18, 135] width:322 height:6

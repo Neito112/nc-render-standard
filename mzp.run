@@ -6,7 +6,10 @@
     eprintln "  NC-Render AI Studio v1.0 — Auto Setup"
     eprintln "=============================================="
     
-    // PHASE 1: SYSTEM DETECTION
+    // PHASE 0: Detect & clean old plugin versions before install
+    checkAndWarnOldPlugin
+    
+    // PHASE 1: System detection
     eprintln "\n[PHASE 1] Detecting system configuration..."
     
     local gpuInfo = getGPUDetection()
@@ -187,6 +190,71 @@ fn checkPythonTorchCUDA =
     catch ()
     
     return #(available, deviceName)
+)
+
+// ============================================================
+// PHASE 0: DETECT & CLEAN OLD PLUGIN VERSIONS
+// ============================================================
+
+fn detectOldPluginFiles =
+(
+    local oldFiles = #()
+    local userMacrosDir = (getDir #userMacros)
+    local targetPattern = userMacrosDir + "/NC_Render_Bridge*.mcr"
+    local candidates = getFiles targetPattern
+    
+    for f in candidates do
+    (
+        local fname = filenameFromPath f
+        // Giữ lại file v1, xóa các bản khác (v7, v2, v3, v4, v5, v6, v8, v9...)
+        if fname != "NC_Render_Bridge_v1.mcr" do
+            append oldFiles #(f, fname)
+    )
+    return oldFiles
+)
+
+fn cleanOldPluginFiles oldFiles =
+(
+    if oldFiles.count == 0 do return false
+    
+    local removedCount = 0
+    for item in oldFiles do
+    (
+        local f = item[1]
+        local fname = item[2]
+        try
+        (
+            if doesFileExist f do
+            (
+                deleteFile f
+                eprintln "  🗑  Đã xóa: " + fname
+                removedCount += 1
+            )
+        )
+        catch (eprintln "  ⚠️ Không thể xóa: " + fname)
+    )
+    return removedCount > 0
+)
+
+// Kiểm tra và cảnh báo plugin trùng
+fn checkAndWarnOldPlugin =
+(
+    local oldFiles = detectOldPluginFiles()
+    if oldFiles.count == 0 do return
+    
+    eprintln ""
+    eprintln "⚠️  PHÁT HIỆN PLUGIN TRÙNG LẪP CŨ:"
+    for item in oldFiles do
+        eprintln "  " + item[2] + " (" + (item[1] as string) + ")"
+    eprintln ""
+    
+    // Xóa tự động (không ask — để tránh xung đột khi cài lại)
+    local removed = cleanOldPluginFiles oldFiles
+    if removed do
+    (
+        eprintln "  Đã gỡ bỏ " + (oldFiles.count as string) + " file cũ."
+        eprintln "  Plugin mới sẽ được cài vào userMacros."
+    )
 )
 
 // ============================================================

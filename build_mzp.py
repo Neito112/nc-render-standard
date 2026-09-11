@@ -16,6 +16,7 @@ MZP_OUTPUT = PLUGIN_ROOT / "NC_Render_Standard_v1.mzp"
 FILES_TO_PACK = [
     # Package info
     "install_info.ini",
+    "PackageContents.xml",
     "mzp.run",
     "install.ms",
     "usermacros/uninstall.ms",
