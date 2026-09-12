@@ -38,9 +38,16 @@ OUTPUT = PLUGIN_ROOT / "NC_Render_Standard_v1.mzp"
 
 REPL = {
     "\u2014": "-", "\u2013": "-",
+    "\u2705": "[OK]", "\u274c": "[X]", "\u26a0\ufe0f": "[!]", "\u2139\ufe0f": "[i]",
+    "\u26a1": "[FAST]", "\U0001f504": "[LOOP]", "\U0001f680": "[FULL]",
+    "\U0001f512": "[LOCK]", "\U0001f4e5": "[DL]", "\U0001f4e6": "[PKG]",
+    "\U0001f50d": "[SEARCH]", "\U0001f5d1": "[DEL]", "\U0001f4be": "[SAVE]",
+    "\U0001f4c1": "[DIR]", "\U0001f4c2": "[DIR]", "\U0001f4f7": "[CAM]", "\U0001f5bc": "[IMG]", "\U0001f3ac": "[REC]", "\u2b07": "[v]", "\u2192": "->",
     "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201f": '"',
     "\u2026": "...", "\u00a0": " ",
-    "\u2705": "[OK]", "\u274c": "[x]",
+    # tieng Viet dac biet: NFD khong tach duoc -> map tay
+    "\u0110": "D", "\u0111": "d",   # D stroke
+    "\u00dd": "Y", "\u00fd": "y", "\u0237": "y",   # Y sac/huyen
 }
 
 
