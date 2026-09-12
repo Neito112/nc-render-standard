@@ -108,6 +108,10 @@ def main():
         zf.writestr("run_install.ms", sanitize_ms(read_clean(INSTALLER_FILE)))  # MaxScript tu file rieng
         zf.writestr("usermacros/NC_Render_Bridge_v1.mcr", sanitize_ms(read_clean(src_mcr)))
 
+        # icons: macroScript header tro icon #("NC_Render",1) -> can file trong package
+        for ip in sorted((PLUGIN_ROOT / "usericons").glob("NC_Render_*.png")):
+            zf.write(ip, "usericons/" + ip.name)
+
     # Verify
     with zipfile.ZipFile(OUTPUT) as zf:
         names = zf.namelist()

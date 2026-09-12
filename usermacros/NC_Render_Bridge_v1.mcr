@@ -1,18 +1,40 @@
-// NC_Render_Bridge_v1.mcr — NC-Render AI Studio
-//
-// CUDA render test, API key, material detection đa renderer,
-// camera consistency, upscale, reference image
-//
-// Cài đặt trực tiếp vào userMacros directory
-// Paths relative to MZP package extraction
+-- NC_Render_Bridge_v1.mcr — NC-Render AI Studio
+--
+-- CUDA render test, API key, material detection đa renderer,
+-- camera consistency, upscale, reference image
+--
+-- Cài đặt trực tiếp vào userMacros directory
+-- Paths relative to MZP package extraction
 
 macroScript NCRenderSmartBridge_v1
 category:"NC-Render AI"
-tooltip:"NC-Render AI Studio v1.0 — CUDA + API + Multi-Renderer"
+tooltip:"NC-Render AI Studio v1.4 — CUDA + API + Multi-Renderer"
 buttonText:"NC-Render v1"
 icon:#("NC_Render", 1)
 (
     global rltNCRenderPro_v1
+
+    -- Helper tu viet, thay ham ma da duoc 3dsmaxbatch kiem chung:
+    --   trim / trimString : KHONG ton tai trong MaxScript
+    --   "abc".startsWith() / .contains() : kieu JS, KHONG ton tai
+    fn ncTrim s =
+    (
+        local t = s as string
+        while t.count > 0 and (t[1] == " " or t[1] == "\t") do t = substring t 2 -1
+        while t.count > 0 and (t[t.count] == " " or t[t.count] == "\t") do t = substring t 1 (t.count - 1)
+        t
+    )
+    fn ncStartsWith s pre =
+    (
+        local a = s as string
+        local b = pre as string
+        if a.count < b.count then false else ((substring a 1 b.count) == b)
+    )
+    fn ncContains s sub =
+    (
+        (findString (s as string) (sub as string)) != undefined
+    )
+
     try (destroyDialog rltNCRenderPro_v1) catch()
     
     // ============================================================
@@ -23,7 +45,7 @@ icon:#("NC_Render", 1)
     if doesFileExist configFile do
     (
         local f = openFile configFile
-        while not eof f do append config (trim (readLine f))
+        while not eof f do append config (ncTrim (readLine f))
         close f
     )
     
@@ -50,9 +72,9 @@ icon:#("NC_Render", 1)
         
         // SECTION 1: GPU & RENDERER STATUS
         groupBox grpSystem " Hệ thống & Renderer " pos:[10, 5] width:340 height:70
-        label lblGPUInfo "GPU: " + gpuName pos:[20, 20] width:320
-        label lblGPUMemory "VRAM: " + gpuMemory + " MB" pos:[20, 40] width:320
-        label lblCUDAStatus "CUDA: " + (if hasCUDA == "true" then "✅ Active" else "⚠️ Not available") pos:[20, 55] width:320
+        label lblGPUInfo ("GPU: " + gpuName) pos:[20, 20] width:320
+        label lblGPUMemory ("VRAM: " + gpuMemory + " MB") pos:[20, 40] width:320
+        label lblCUDAStatus ("CUDA: " + (if hasCUDA == "true" then "✅ Active" else "⚠️ Not available")) pos:[20, 55] width:320
         
         // Renderer checkboxes (đọc trạng thái từ hệ thống)
         local isCorona = coronaInstalled == "true"
@@ -63,7 +85,7 @@ icon:#("NC_Render", 1)
         checkbox chkVray "V-Ray Renderer" pos:[180, 85] width:150 height:18 \
             checked:isVray enabled:(isVray or hasCUDA == "true")
         
-        label lblStatus "Trạng thái renderer: " + renderMethod pos:[20, 108] width:320
+        label lblStatus ("Trạng thái renderer: " + renderMethod) pos:[20, 108] width:320
         
         // SECTION UPDATE: Kiểm tra cập nhật plugin
         groupBox grpUpdate " Plugin Update " pos:[10, 115] width:340 height:110
@@ -372,14 +394,14 @@ icon:#("NC_Render", 1)
                     local methodLine = readLine f
                     if methodLine != "" do
                     (
-                        case (trim methodLine) of
+                        case (ncTrim methodLine) of
                         (
                             "Corona GPU": ddlRenderMethod.selection = 1
                             "V-Ray GPU": ddlRenderMethod.selection = 2
                             "Local SD (CUDA)": ddlRenderMethod.selection = 3
                             "External API (FLUX/Google/MJ)": ddlRenderMethod.selection = 4
                         )
-                        renderMethod = trim methodLine
+                        renderMethod = ncTrim methodLine
                     )
                     close f
                     lblStatus.text = "Preset loaded: " + (filenameFromPath selected)
@@ -704,9 +726,9 @@ icon:#("NC_Render", 1)
                             4: // External API — FLUX / Google / Midjourney
                             (
                                 // Select provider based on API key prefix
-                                local provider = if apiKey.startsWith("hf_") then "FLUX (HuggingFace)" \
-                                    else if apiKey.startsWith("AIza") then "Google Imagen" \
-                                    else if apiKey.contains("mj_") then "Midjourney" \
+                                local provider = if ncStartsWith apiKey "hf_" then "FLUX (HuggingFace)" \
+                                    else if ncStartsWith apiKey "AIza" then "Google Imagen" \
+                                    else if ncContains apiKey "mj_" then "Midjourney" \
                                     else "Unknown provider"
                                 
                                 lblStatus.text = "Gửi request đến " + provider + "..."
@@ -844,7 +866,7 @@ icon:#("NC_Render", 1)
                             local refPath = (getDir #temp) + "/nc_reference.png"
                             copy referenceImage filename:refPath
                             
-                            local provider = if apiKey.startsWith("hf_") then "FLUX" else "External API"
+                            local provider = if ncStartsWith apiKey "hf_" then "FLUX" else "External API"
                             messageBox "Sending reference + prompt to " + provider + "..." title:"API Request" buttons:[ #OK ]
                         )
                         else
@@ -1000,7 +1022,7 @@ icon:#("NC_Render", 1)
                         close existingImg
 
                         // Send upscale request
-                        local provider = if apiKey.startsWith("hf_") then "FLUX Upscale" else "API Upscale"
+                        local provider = if ncStartsWith apiKey "hf_" then "FLUX Upscale" else "API Upscale"
 
                         local payload = #()
                         append payload #( "image", tempImgPath )

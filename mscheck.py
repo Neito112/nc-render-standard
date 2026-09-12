@@ -33,10 +33,12 @@ def check(name, code):
     op, cl = j.count("("), j.count(")")
     if op != cl:
         problems.append(f"paren unbalanced: {op} vs {cl}")
-    # 2b. goi ten built-in "ho" da gay undefined trong thuc te
-    for ghost in ["appendIfNotFound", "appendIfUnique", "appendUnique", "macros\\.reload"]:
-        if re.search(r"\b" + ghost + r"\b", code):
-            problems.append(f"goi '{ghost}' — ten built-in khong dang tin cay, dung addUnique tu viet (findItem+append)")
+    # 2b. goi ten built-in "ho" da gay undefined trong thuc te (bo qua dong comment)
+    code_nc = "\n".join(l for l in code.splitlines() if not l.strip().startswith("--"))
+    for ghost in [r"appendIfNotFound", r"appendIfUnique", r"appendUnique", r"macros\.reload",
+                  r"\btrim\s*\(", r"trimString", r"\.startsWith\b", r"\.contains\b", r"\bignore\s*\("]:
+        if re.search(ghost, code_nc):
+            problems.append(f"goi '{ghost}' — ham ma da kiem chung bang 3dsmaxbatch, khong duoc ton tai")
     # 3. fn defined AFTER first use at execution level? (rough: fn X vs bare X call)
     defs = set(re.findall(r"\bfn\s+(\w+)", code))
     for d in defs:

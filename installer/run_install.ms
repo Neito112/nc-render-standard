@@ -20,6 +20,14 @@
         if (doesFileExist srcPath) then
         (
             copyFile srcPath dstPath
+            -- copy icons (neu package co usericons/)
+            local icSrc = thisDir + "usericons"
+            if (doesFileExist (icSrc + "/")) then
+            (
+                local icDst = getDir #userIcons
+                for icf in (getFiles (icSrc + "/*.png")) do
+                    copyFile icf (icDst + "/" + (filenameFromPath icf))
+            )
             macros.load dstPath
             -- Mo ngay giao dung: macros.run la ham THAT cua struct macros
             local opened = try (macros.run "NC-Render AI" "NCRenderSmartBridge_v1"; true) catch (false)

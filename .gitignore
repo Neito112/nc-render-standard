@@ -30,3 +30,6 @@ $RECYCLE.BIN/
 
 # Config file mà user tạo ra (không commit)
 nc_render_config.txt
+installer/_zipcopy.mcr
+installer/test_*.txt
+installer/batch_out.txt
