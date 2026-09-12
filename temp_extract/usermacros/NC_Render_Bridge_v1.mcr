@@ -1,13 +1,13 @@
--- NC_Render_Bridge_v1.mcr — NC-Render AI Studio
+-- NC_Render_Bridge_v1.mcr - NC-Render AI Studio
 --
--- CUDA render test, API key, material detection đa renderer,
+-- CUDA render test, API key, material detection da renderer,
 -- camera consistency, upscale, reference image
 --
--- Cài đặt trực tiếp vào userMacros directory
+-- Cai dat truc tiep vao userMacros directory
 -- Paths relative to MZP package extraction
 macroScript NCRenderSmartBridge_v1
 category:"NC-Render AI"
-tooltip:"NC-Render AI Studio v1.4 — CUDA + API + Multi-Renderer"
+tooltip:"NC-Render AI Studio v1.4 - CUDA + API + Multi-Renderer"
 buttonText:"NC-Render v1"
 icon:#("NC_Render", 1)
 (
@@ -42,7 +42,7 @@ icon:#("NC_Render", 1)
     )
     try (destroyDialog rltNCRenderPro_v1) catch()
         -- ============================================================
-        -- CONFIG — loaded from config file if exists
+        -- CONFIG - loaded from config file if exists
         -- ============================================================
     global configFile = (getDir #temp) + "/nc_render_config.txt"
     local config = #()
@@ -54,26 +54,22 @@ icon:#("NC_Render", 1)
     )
     
     global renderMethod = if config.count > 0 then config[1] else "Corona GPU"
-    global apiProvider = if config.count > 1 then config[2] else "openrouter"
-    global apiKey = if config.count > 2 then config[3] else ""
-    global apiModel = if config.count > 3 then config[4] else "google/gemini-2.5-flash-image-preview"
-    global gpuName = if config.count > 4 then config[5] else "Unknown"
-    global gpuMemory = if config.count > 5 then config[6] else "0"
-    global hasCUDA = if config.count > 6 then config[7] else "false"
-    global coronaInstalled = if config.count > 7 then config[8] else "false"
-    global vrayInstalled = if config.count > 8 then config[9] else "false"
-    global pytorchCUDA = if config.count > 9 then config[10] else "false"
-    global renderWidth = 1920
-    global renderHeight = 1080
-        -- Python interpreter có CUDA — trỏ tới venv Hermes Agent
+    global apiKey = if config.count > 1 then config[2] else ""
+    global gpuName = if config.count > 2 then config[3] else "Unknown"
+    global gpuMemory = if config.count > 3 then config[4] else "0"
+    global hasCUDA = if config.count > 4 then config[5] else "false"
+    global coronaInstalled = if config.count > 5 then config[6] else "false"
+    global vrayInstalled = if config.count > 6 then config[7] else "false"
+    global pytorchCUDA = if config.count > 7 then config[8] else "false"
+        -- Python interpreter co CUDA - tro toi venv Hermes Agent
     global pythonBin = "C:/Users/HOMIE/AppData/Local/hermes/hermes-agent/venv/Scripts/python.exe"
     -- Duong dan project goc (giu toan bo payload trong thu muc du an)
     global ncPluginRoot = @"D:/Program/setup 3dsmax/Plugins/NC_Render_Standard"
     global ncScriptsDir = ncPluginRoot + "/scripts/"
         -- ============================================================
-        -- UI — Main rollout
+        -- UI - Main rollout
         -- ============================================================
-    rollout rltNCRenderPro_v1 "NC-Render AI Studio v1.0 — CUDA + API + Multi-Renderer" width:1120 height:760
+    rollout rltNCRenderPro_v1 "NC-Render AI Studio v1.0 - CUDA + API + Multi-Renderer" width:1120 height:760
     (
         -- Gan text dong sau khi tao widget (rollout clause can string literal)
 
@@ -103,24 +99,24 @@ icon:#("NC_Render", 1)
         -- Update button texts
             btnRender1.text = case true of
             (
-                (renderMethod == "Corona GPU"): "⚡ Render Test (Corona GPU)"
-                (renderMethod == "V-Ray GPU"): "⚡ Render Test (V-Ray GPU)"
-                (renderMethod == "Local SD (CUDA)"): "⚡ Generate from Prompt (CUDA)"
-                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "⚡ Generate via API"
+                (renderMethod == "Corona GPU"): "[FAST] Render Test (Corona GPU)"
+                (renderMethod == "V-Ray GPU"): "[FAST] Render Test (V-Ray GPU)"
+                (renderMethod == "Local SD (CUDA)"): "[FAST] Generate from Prompt (CUDA)"
+                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "[FAST] Generate via API"
             )
             btnRender2.text = case true of
             (
-                (renderMethod == "Corona GPU"): "🔄 Corona Interactive"
-                (renderMethod == "V-Ray GPU"): "🔄 V-Ray Interactive"
-                (renderMethod == "Local SD (CUDA)"): "🔄 Generate + Upscale"
-                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "🔄 Generate with Reference"
+                (renderMethod == "Corona GPU"): "[LOOP] Corona Interactive"
+                (renderMethod == "V-Ray GPU"): "[LOOP] V-Ray Interactive"
+                (renderMethod == "Local SD (CUDA)"): "[LOOP] Generate + Upscale"
+                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "[LOOP] Generate with Reference"
             )
             btnRender3.text = case true of
             (
-                (renderMethod == "Corona GPU"): "🚀 Full Render (Corona)"
-                (renderMethod == "V-Ray GPU"): "🚀 Full Render (V-Ray)"
-                (renderMethod == "Local SD (CUDA)"): "🚀 Batch Generate"
-                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "🚀 Upscale Result"
+                (renderMethod == "Corona GPU"): "[FULL] Full Render (Corona)"
+                (renderMethod == "V-Ray GPU"): "[FULL] Full Render (V-Ray)"
+                (renderMethod == "Local SD (CUDA)"): "[FULL] Batch Generate"
+                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "[FULL] Upscale Result"
             )
             
             lblStatus.text = "Render method: " + renderMethod
@@ -212,9 +208,9 @@ icon:#("NC_Render", 1)
 
         fn applyResToMax =
         (
-            global renderWidth = spnWidth.value as integer
-            global renderHeight = spnHeight.value as integer
-            lblStatus.text = ("Kích thước: " + (renderWidth as string) + " x " + (renderHeight as string))
+            renderWidth = spnWidth.value
+            renderHeight = spnHeight.value
+            lblStatus.text = ("Kich thuoc: " + (renderWidth as string) + " x " + (renderHeight as string))
         )
 
         fn refreshPreviewDisplay =
@@ -223,7 +219,7 @@ icon:#("NC_Render", 1)
             if raw != undefined then
             (
                 uiPreview.bitmap = raw
-                lblStatus.text = "Đã cập nhật khung nhìn"
+                lblStatus.text = "Da cap nhat khung nhin"
             )
         )
 
@@ -233,7 +229,7 @@ icon:#("NC_Render", 1)
             for c in cameras where classOf c != Targetobject do append camNames c.name
             ddlCams.items = camNames
             ddlCams.selection = 1
-            lblStatus.text = "Đã quét lại cameras"
+            lblStatus.text = "Da quet lai cameras"
         )
 
         fn captureGhostViewport passType:#rgb =
@@ -349,11 +345,14 @@ icon:#("NC_Render", 1)
             lblGPUInfo.text = "GPU: " + gpuName
             lblGPUMemory.text = "VRAM: " + gpuMemory + " MB"
             lblCUDAStatus.text = "CUDA: " + (if hasCUDA == "true" then "Active" else "Not available")
-            -- btnRender texts gan trong open (updateUIForMethod)
+            lblRendererInfo.text = "Renderer: " + renderMethod
+            btnRender1.text = renderButtons[1]
+            btnRender2.text = renderButtons[2]
+            btnRender3.text = renderButtons[3]
         )
         -- --- COLUMN LEFT: CONTROL PANEL ---
         -- SECTION 1: GPU & RENDERER STATUS
-        groupBox grpSystem " Hệ thống & Renderer " pos:[8, 8] width:196 height:96
+        groupBox grpSystem " He thong & Renderer " pos:[8, 8] width:196 height:96
         label lblGPUInfo "GPU: -" pos:[16, 24] width:180
         label lblGPUMemory "VRAM: -" pos:[16, 40] width:180
         label lblCUDAStatus "CUDA: -" pos:[16, 56] width:180
@@ -362,164 +361,25 @@ icon:#("NC_Render", 1)
         local isVray = vrayInstalled == "true"
         checkbox chkCorona "Corona" pos:[16, 72] width:80 height:18 checked:isCorona enabled:(isCorona or hasCUDA == "true")
         checkbox chkVray "V-Ray" pos:[100, 72] width:80 height:18 checked:isVray enabled:(isVray or hasCUDA == "true")
-        -- SECTION UPDATE: Kiểm tra cập nhật plugin
+        -- SECTION UPDATE: Kiem tra cap nhat plugin
         groupBox grpUpdate " Plugin Update " pos:[212, 8] width:196 height:96
-        label lblUpdateInfo "Phiên bản hiện tại: v1.0.0" pos:[220, 24] width:180
-        button btnCheckUpdate "🔍 Kiểm tra" pos:[220, 42] width:88 height:24
-        button btnDoUpdate "⬇ Tải & Cài" pos:[312, 42] width:88 height:24 enabled:false
+        label lblUpdateInfo "Phien ban hien tai: v1.0.0" pos:[220, 24] width:180
+        button btnCheckUpdate "[SEARCH] Kiem tra" pos:[220, 42] width:88 height:24
+        button btnDoUpdate "[v] Tai & Cai" pos:[312, 42] width:88 height:24 enabled:false
         label lblUpdateStatus "" pos:[220, 72] width:180 height:18 style_sunkenedge:true
-
-        on btnDoUpdate pressed do
-        (
-            lblUpdateStatus.text = "Đang tải bản cập nhật..."
-            btnDoUpdate.enabled = false
-            btnCheckUpdate.enabled = false
-            try
-            (
-                local statusFile = (getDir #temp) + "/nc_update_status.txt"
-                local pyScript = ncScriptsDir + "github_update.py"
-                local userMacros = (getDir #userMacros)
-                local cmd = (pythonBin + " \"" + pyScript + "\" --download --current-version v1.0.0 --user-macros \"" + userMacros + "\" > \"" + statusFile + "\"")
-                shellLaunch cmd
-                -- Đợi cấp tải xong (up to 60s)
-                local waited = 0
-                while not doesFileExist statusFile and waited < 60 do
-                (
-                    sleep 1
-                    waited += 1
-                )
-                if doesFileExist statusFile then
-                (
-                    local f = openFile statusFile
-                    local content = ""
-                    while not eof f do content += (readLine f) + "\n"
-                    close f
-                    if ncHas content "updated" and ncHas content "true" then
-                    (
-                        lblUpdateStatus.text = "✅ Cập nhật thành công — khởi động lại 3ds Max để áp dụng"
-                        btnDoUpdate.enabled = false
-                        btnCheckUpdate.enabled = false
-                    )
-                    else if ncHas content "error" then
-                    (
-                        lblUpdateStatus.text = "❌ Lỗi cập nhật — xem log"
-                        btnCheckUpdate.enabled = true
-                    )
-                    else if ncHas content "up_to_date" then
-                    (
-                        lblUpdateStatus.text = "ℹ️ Không có bản cập nhật mới"
-                        btnCheckUpdate.enabled = true
-                    )
-                    else
-                    (
-                        lblUpdateStatus.text = "⚠️ Không đọc được kết quả — kiểm tra lại"
-                        btnCheckUpdate.enabled = true
-                    )
-                )
-                else
-                (
-                    lblUpdateStatus.text = "❌ Timeout — tải bản cập nhật thất bại"
-                    btnCheckUpdate.enabled = true
-                )
-            )
-            catch
-            (
-                lblUpdateStatus.text = "Lỗi: " + (getCurrentException() as string)
-                btnCheckUpdate.enabled = true
-            )
-        )
-
-        on btnCheckUpdate pressed do
-        (
-            lblUpdateStatus.text = "Đang kiểm tra..."
-            btnDoUpdate.enabled = false
-            try
-            (
-                local statusFile = (getDir #temp) + "/nc_update_status.txt"
-                local pyScript = ncScriptsDir + "github_update.py"
-                -- Gọi Python, redirect output ra file
-                local cmd = (pythonBin + " \"" + pyScript + "\" --check-only --current-version v1.0.0 --json > \"" + statusFile + "\"")
-                shellLaunch cmd
-                -- Đợi process kết thúc (timeout 15s)
-                local waited = 0
-                while not doesFileExist statusFile and waited < 15 do
-                (
-                    sleep 1
-                    waited += 1
-                )
-                if doesFileExist statusFile then
-                (
-                    local f = openFile statusFile
-                    local content = ""
-                    while not eof f do content += (readLine f) + "\n"
-                    close f
-                    -- Parse simple: kiểm tra keywords trong output JSON
-                    if ncHas content "up_to_date" and ncHas content "true" then
-                    (
-                        lblUpdateStatus.text = "✅ Bạn đang dùng phiên bản mới nhất"
-                        btnDoUpdate.enabled = false
-                    )
-                    else if ncHas content "update_available" and ncHas content "true" then
-                    (
-                        lblUpdateStatus.text = "📦 CÓ bản cập nhật — nhấn \"Tải & Cài đặt\""
-                        btnDoUpdate.enabled = true
-                    )
-                    else if ncHas content "error" then
-                    (
-                        lblUpdateStatus.text = "⚠️ Lỗi kiểm tra — kiểm tra mạng hoặc GitHub API"
-                        btnDoUpdate.enabled = false
-                    )
-                    else
-                    (
-                        lblUpdateStatus.text = "⚠️ Không thể đọc kết quả — thử lại"
-                        btnDoUpdate.enabled = false
-                    )
-                )
-                else
-                (
-                    lblUpdateStatus.text = "⚠️ Không thể kết nối GitHub API (timeout)"
-                    btnDoUpdate.enabled = false
-                )
-            )
-            catch
-            (
-                lblUpdateStatus.text = "Lỗi: " + (getCurrentException() as string)
-                btnDoUpdate.enabled = false
-            )
-        )
         -- SECTION 2: CAMERA & FRAME
         groupBox grpCam " Camera & Frame " pos:[8, 112] width:400 height:118
         dropdownList ddlCams "" pos:[16, 128] width:384 height:6
         
         button btnQuickCam "+ Quick Cam" pos:[16, 152] width:92 height:24
-        button btnRefreshCams "🔄 Refresh" pos:[112, 152] width:92 height:24
+        button btnRefreshCams "[LOOP] Refresh" pos:[112, 152] width:92 height:24
         button btn2Point "2-Point Perp" pos:[208, 152] width:92 height:24
         button btnResetCam "Reset Cam" pos:[304, 152] width:96 height:24
-
-        on btnQuickCam pressed do
-        (
-            -- Tao camera ngay tai goc nhin viewport hien tai (viewPos/viewDir/viewUp: bien toan cuc Max)
-            local n = 1
-            while (getNodeByName ("NC_Cam" + (n as string))) != undefined do n += 1
-            local cam = FreeCamera pos:viewPos name:("NC_Cam" + (n as string))
-            cam.dir = viewDir
-            max.viewCamera = cam
-            refreshCamList()
-            lblStatus.text = "Camera: " + cam.name
-        )
-        
-        on btnResetCam pressed do
-        (
-            -- Bo camera gan vao viewport, tra ve goc nhin tu do
-            try ( viewport.setCamera undefined ) catch()
-            refreshCamList()
-            lblStatus.text = "Da reset ve viewport hien tai"
-        )
         
         spinner spnWidth "W" range:[64, 7680, 1920] type:#integer fieldwidth:40 pos:[16, 184] enabled:(renderMethod == "Corona GPU" or renderMethod == "V-Ray GPU")
         spinner spnHeight "H" range:[64, 7680, 1080] type:#integer fieldwidth:40 pos:[120, 184] enabled:(renderMethod == "Corona GPU" or renderMethod == "V-Ray GPU")
         spinner spnRatio "R" range:[0.1, 10.0, 1.778] type:#float scale:0.001 fieldwidth:36 pos:[220, 184] enabled:(renderMethod == "Corona GPU" or renderMethod == "V-Ray GPU")
-        checkbutton ckbLock "🔒 L" checked:true width:24 height:20 pos:[308, 182] tooltip:"Khóa tỉ lệ khung hình"
+        checkbutton ckbLock "[LOCK] L" checked:true width:24 height:20 pos:[308, 182] tooltip:"Khoa ti le khung hinh"
         dropdownList ddlRatio "" pos:[336, 182] width:64 height:5 items:#("16:9", "4:3", "5:4", "3:2", "2:1", "1:1", "9:16")
         
         on ddlRatio selected idx do
@@ -536,15 +396,15 @@ icon:#("NC_Render", 1)
         )
         -- SECTION 3: RENDER METHOD SELECTION
         groupBox grpRenderMethod " Render Method " pos:[8, 238] width:400 height:132
-        label lblMethod "Chọn phương án render:" pos:[16, 254] width:384 height:18
-        dropdownList ddlRenderMethod "" pos:[16, 274] width:316 height:6 items:#("Corona GPU (mặc định)", "V-Ray GPU", "Local SD (CUDA)", "OpenRouter API", "Gemini API")
+        label lblMethod "Chon phuong an render:" pos:[16, 254] width:384 height:18
+        dropdownList ddlRenderMethod "" pos:[16, 274] width:316 height:6 items:#("Corona GPU (mac dinh)", "V-Ray GPU", "Local SD (CUDA)", "OpenRouter API", "Gemini API")
         button btnDefaults "Default" pos:[340, 274] width:60 height:21
         
         groupBox grpApi " API Configuration " pos:[16, 304] width:384 height:54 visible:false
         dropdownList ddlApiProvider "" pos:[24, 324] width:96 height:5 items:#("openrouter", "gemini") visible:false
         editText txtApiKey "" pos:[124, 324] width:150 height:18 visible:false passwordChar:"*" text:apiKey
         editText txtApiModel "" pos:[278, 324] width:114 height:18 visible:false
-        button btnSaveApiCfg "💾 Save" pos:[16, 304] width:60 height:24 visible:false
+        button btnSaveApiCfg "[SAVE] Save" pos:[16, 304] width:60 height:24 visible:false
         
         on ddlRenderMethod selected idx do
         (
@@ -577,7 +437,6 @@ icon:#("NC_Render", 1)
             (
                 renderMethod = "OpenRouter API"
                 ddlRenderMethod.selection = 4
-                updateUIForMethod()
             )
             lblStatus.text = "Render method: " + renderMethod
             updateUIForMethod()
@@ -600,11 +459,11 @@ icon:#("NC_Render", 1)
         groupBox grpPrompt " Prompt & Materials " pos:[8, 378] width:400 height:200
         edittext txtPrompt "" text:"modern architectural interior, natural soft daylight, photorealistic, 8k, architectural digest" pos:[16, 394] width:384 height:70
         
-        button btnSavePrompt "💾 Save Preset" pos:[16, 470] width:188 height:24
-        button btnLoadPreset "📂 Load Preset" pos:[212, 470] width:188 height:24
+        button btnSavePrompt "[SAVE] Save Preset" pos:[16, 470] width:188 height:24
+        button btnLoadPreset "[DIR] Load Preset" pos:[212, 470] width:188 height:24
         
-        button btnDetectMaterial "🔍 Quét Materials" pos:[16, 502] width:188 height:24
-        button btnRefreshMat "🔄 Refresh" pos:[212, 502] width:188 height:24
+        button btnDetectMaterial "[SEARCH] Quet Materials" pos:[16, 502] width:188 height:24
+        button btnRefreshMat "[LOOP] Refresh" pos:[212, 502] width:188 height:24
         listbox lstMaterials "" pos:[16, 532] width:384 height:3
         
         on btnDetectMaterial pressed do
@@ -619,22 +478,6 @@ icon:#("NC_Render", 1)
             else
             (
                 lstMaterials.items = #("No materials found")
-                lblStatus.text = "No materials detected"
-            )
-        )
-        
-        on btnRefreshMat pressed do
-        (
-            local mats = scanMaterialsInScene()
-            if mats.count > 0 then
-            (
-                lstMaterials.items = for m in mats collect m.name
-                lstMaterials.selection = 1
-                lblStatus.text = "Refreshed: " + (mats.count as string) + " materials"
-            )
-            else
-            (
-                lstMaterials.items = #("(khong co material trong scene)")
                 lblStatus.text = "No materials detected"
             )
         )
@@ -695,19 +538,19 @@ icon:#("NC_Render", 1)
         -- SECTION 6: QUALITY & UPSCALE
         groupBox grpQuality " Quality & Upscale " pos:[8, 654] width:400 height:56
         label lblUpscale "Upscale:" pos:[16, 674] width:48 height:18
-        dropdownList ddlUpscale "" pos:[64, 672] width:96 height:5 items:#("1x (không)", "2x", "4x", "8x")
-        checkbutton chkDetail "Tối ưu chi tiết" checked:true pos:[168, 670] width:112 height:24
+        dropdownList ddlUpscale "" pos:[64, 672] width:96 height:5 items:#("1x (khong)", "2x", "4x", "8x")
+        checkbutton chkDetail "Toi uu chi tiet" checked:true pos:[168, 670] width:112 height:24
         checkbutton chkTile "Tile-based" checked:true pos:[288, 670] width:112 height:24
         -- --- COLUMN RIGHT: PREVIEW ---
         groupBox grpPreview " KHUNG PREVIEW " pos:[416, 8] width:696 height:720
         bitmap uiPreview width:680 height:590 pos:[424, 24] color:(color 18 22 30)
-        button btnRefreshPreview "🔄 Cập Nhật Viewport" pos:[424, 622] width:220 height:24
-        button btnFullPreview "📷 Capture Viewport" pos:[652, 622] width:220 height:24
-        button btnSavePreview "💾 Save Preview" pos:[880, 622] width:224 height:24
+        button btnRefreshPreview "[LOOP] Cap Nhat Viewport" pos:[424, 622] width:220 height:24
+        button btnFullPreview "[CAM] Capture Viewport" pos:[652, 622] width:220 height:24
+        button btnSavePreview "[SAVE] Save Preview" pos:[880, 622] width:224 height:24
         
-        label lblReference "Reference (tham chiếu):" pos:[424, 660] width:160 height:18
-        button btnLoadRef "📁 Load ref" pos:[424, 680] width:100 height:24
-        button btnClearRef "🗑 Clear" pos:[528, 680] width:100 height:24
+        label lblReference "Reference (tham chieu):" pos:[424, 660] width:160 height:18
+        button btnLoadRef "[DIR] Load ref" pos:[424, 680] width:100 height:24
+        button btnClearRef "[DEL] Clear" pos:[528, 680] width:100 height:24
         local referenceImage = undefined
         
         on btnLoadRef pressed do
@@ -730,7 +573,7 @@ icon:#("NC_Render", 1)
             )
         )
         -- SECTION 7: STATUS
-        label lblStatus "Trạng thái: Sẵn sàng." pos:[8, 736] width:1096 height:18 style_sunkenedge:true
+        label lblStatus "Trang thai: San sang." pos:[8, 736] width:1096 height:18 style_sunkenedge:true
         -- ============================================================
         -- HELPER FUNCTIONS
         -- ============================================================
@@ -742,9 +585,9 @@ icon:#("NC_Render", 1)
                 local cfgPath = (getDir #temp) + "/nc_render_config.txt"
                 local f = createFile cfgPath
                 writeLine f (renderMethod as string)
-                writeLine f (if ddlApiProvider != undefined then (case ddlApiProvider.selection of (1:"openrouter", 2:"gemini", default:"openrouter")) else "openrouter")
+                writeLine f (if ddlApiProvider != undefined then ddlApiProvider.selected else "openrouter")
                 writeLine f (apiKey as string)
-                writeLine f (if txtApiModel != undefined then txtApiModel.text else apiModel)
+                writeLine f (if txtApiModel != undefined then txtApiModel.text else "google/gemini-2.5-flash-image-preview")
                 writeLine f (gpuName as string)
                 writeLine f (gpuMemory as string)
                 writeLine f (hasCUDA as string)
@@ -755,70 +598,37 @@ icon:#("NC_Render", 1)
             ) catch()
         )
 
-        fn ncJsonImage jPath =
-        (
-            -- Doc JSON 1 dong {.."image":"..."}, tra ve duong dan PNG hoac undefined
-            try
-            (
-                local f = openFile jPath
-                local j = ""
-                while not eof f do j += readLine f
-                close f
-                local key = "\"image\": \""
-                local p1 = findString j key
-                if p1 == undefined then ( key = "\"image\":\""; p1 = findString j key )
-                if p1 == undefined then undefined
-                else (
-                    p1 += key.count
-                    local p2 = findString (substring j p1 -1) "\""
-                    if p2 == undefined then undefined else (substring j p1 (p2 - 1))
-                )
-            ) catch undefined
-        )
-        
         fn ncRunPython cmdArgs outFile =
         (
-            -- Sync python chay co timeout; xu ly het pipe TRUOC WaitForExit de tranh pipe deadlock.
-            -- tra ve #(exitCode, errTail)
-            local psi = dotNetObject "System.Diagnostics.ProcessStartInfo"
-            psi.FileName = pythonBin
-            psi.Arguments = cmdArgs
-            psi.UseShellExecute = false
-            psi.CreateNoWindow = true
-            psi.RedirectStandardOutput = true
-            psi.RedirectStandardError = true
-            local ps = dotNetClass "System.Diagnostics.Process"
-            local proc = ps.Start psi
-            local deadline = (dotNetClass "System.DateTime").Now.AddMilliseconds (if renderMethod == "Local SD (CUDA)" then 900000.0 else 180000.0)
-            local outSb = dotNetObject "System.Text.StringBuilder"
-            local errSb = dotNetObject "System.Text.StringBuilder"
-            local drained = false
-            while not drained do
+            local psInfo = dotNetObject "System.Diagnostics.ProcessStartInfo" pythonBin
+            psInfo.Arguments = cmdArgs
+            psInfo.UseShellExecute = false
+            psInfo.CreateNoWindow = true
+            psInfo.RedirectStandardOutput = true
+            psInfo.RedirectStandardError = true
+            
+            local ps = dotNetObject "System.Diagnostics.Process"
+            ps.StartInfo = psInfo
+            ps.Start()
+            
+            local timeout = if renderMethod == "Local SD (CUDA)" then 900000 else 180000
+            ps.WaitForExit timeout
+            
+            local exitCode = -1
+            try (exitCode = ps.ExitCode) catch()
+            local errTail = ""
+            if not ps.HasExited then
             (
-                local so = proc.StandardOutput
-                local se = proc.StandardError
-                local c1 = so.Read()
-                local c2 = se.Read()
-                if c1 >= 0 do outSb.Append ((dotNetClass "System.Char").ConvertFromInt32 c1)
-                if c2 >= 0 do errSb.Append ((dotNetClass "System.Char").ConvertFromInt32 c2)
-                if c1 < 0 and c2 < 0 then
-                (
-                    if proc.WaitForExit 100 then drained = true
-                    if (dotNetClass "System.DateTime").Now > deadline do
-                    (
-                        try ( proc.Kill() ) catch()
-                        drained = true
-                    )
-                )
+                ps.Kill()
+                errTail = "Process timeout"
             )
-            local code = -1
-            try ( code = proc.ExitCode ) catch ( code = -2 )
-            local err = errSb.ToString()
-            local out = outSb.ToString()
-            if code != 0 and err != undefined and err.count < 3 do err = out
-            if err == undefined do err = ""
-            local tail = if err.count > 300 then (substring err (err.count - 299) 300) else err
-            return #(code, tail)
+            else
+            (
+                local errText = ps.StandardError.ReadToEnd()
+                if errText != undefined do errTail = (errText as string)
+                if errTail.count > 100 do errTail = substring errTail (errTail.count - 100) 100
+            )
+            return #(exitCode, errTail)
         )
         -- ============================================================
         -- RENDER HANDLERS
@@ -826,7 +636,7 @@ icon:#("NC_Render", 1)
         
         on btnRender1 pressed do
         (
-            lblStatus.text = "Đang xử lý render..."
+            lblStatus.text = "Dang xu ly render..."
             
             case renderMethod of
             (
@@ -843,7 +653,7 @@ icon:#("NC_Render", 1)
                         
                         renderers.current = renderers.Corona
                         
-                        lblStatus.text = "Đang render (Corona GPU)..."
+                        lblStatus.text = "Dang render (Corona GPU)..."
                         local startTime = timeStamp()
                         local img = render()
                         local elapsed = (timeStamp() - startTime) / 1000.0
@@ -851,15 +661,15 @@ icon:#("NC_Render", 1)
                         if img != undefined then
                         (
                             uiPreview.bitmap = img
-                            lblStatus.text = ("Render xong: " + (w as string) + "x" + (h as string) + " — " + (elapsed as string) + "s")
+                            lblStatus.text = ("Render xong: " + (w as string) + "x" + (h as string) + " - " + (elapsed as string) + "s")
                             local savePath = (getDir #temp) + "/nc_render_test.png"
                             img.filename = savePath
                             save img
                             close img
                         )
-                        else lblStatus.text = "Render thất bại! Kiểm tra Corona cài chưa?"
+                        else lblStatus.text = "Render that bai! Kiem tra Corona cai chua?"
                     )
-                    catch (lblStatus.text = "Lỗi render: " + (getCurrentException() as string))
+                    catch (lblStatus.text = "Loi render: " + (getCurrentException() as string))
                 )
                 
                 "V-Ray GPU":
@@ -874,7 +684,7 @@ icon:#("NC_Render", 1)
                         
                         renderers.current = renderers.VRay
                         
-                        lblStatus.text = "Đang render (V-Ray GPU)..."
+                        lblStatus.text = "Dang render (V-Ray GPU)..."
                         local startTime = timeStamp()
                         local img = render()
                         local elapsed = (timeStamp() - startTime) / 1000.0
@@ -882,22 +692,22 @@ icon:#("NC_Render", 1)
                         if img != undefined then
                         (
                             uiPreview.bitmap = img
-                            lblStatus.text = ("Render xong: " + (w as string) + "x" + (h as string) + " — " + (elapsed as string) + "s")
+                            lblStatus.text = ("Render xong: " + (w as string) + "x" + (h as string) + " - " + (elapsed as string) + "s")
                             local savePath = (getDir #temp) + "/nc_render_test.png"
                             img.filename = savePath
                             save img
                             close img
                         )
-                        else lblStatus.text = "Render thất bại! Kiểm tra V-Ray cài chưa?"
+                        else lblStatus.text = "Render that bai! Kiem tra V-Ray cai chua?"
                     )
-                    catch (lblStatus.text = "Lỗi render: " + (getCurrentException() as string))
+                    catch (lblStatus.text = "Loi render: " + (getCurrentException() as string))
                 )
                 
                 "Local SD (CUDA)":
                 (
                     try
                     (
-                        lblStatus.text = "Đang generate từ prompt (CUDA)..."
+                        lblStatus.text = "Dang generate tu prompt (CUDA)..."
                         local scenePrompt = buildScenePrompt()
                         local finalPrompt = txtPrompt.text + " | " + scenePrompt
                         
@@ -919,23 +729,29 @@ icon:#("NC_Render", 1)
                         local res = ncRunPython cmdArgs outFile
                         if res[1] == 0 then
                         (
-                            local pth = ncJsonImage outFile
-                            if pth != undefined and doesFileExist pth then
-                            (
-                                uiPreview.bitmap = openBitmap pth
-                                lblStatus.text = "Generate xong: " + pth
-                            )
-                            else lblStatus.text = "Xong nhung khong doc duoc anh tu JSON"
+                            try (
+                                local f = openFile outFile
+                                local j = readLine f
+                                close f
+                                local p1 = findString j "\"image\":\""
+                                if p1 != undefined then (
+                                    p1 += 9
+                                    local p2 = findString (substring j p1 -1) "\""
+                                    local pth = substring j p1 (p2-1)
+                                    uiPreview.bitmap = openBitmap pth
+                                    lblStatus.text = "Generate xong."
+                                )
+                            ) catch(lblStatus.text = "Generate done, but image load failed.")
                         ) else lblStatus.text = "Loi: " + res[2]
                     )
-                    catch (lblStatus.text = "Lỗi generation: " + (getCurrentException() as string))
+                    catch (lblStatus.text = "Loi generation: " + (getCurrentException() as string))
                 )
                 
                 "OpenRouter API":
                 (
                     try
                     (
-                        lblStatus.text = "Đang gửi request đến OpenRouter API..."
+                        lblStatus.text = "Dang gui request den OpenRouter API..."
                         local finalPrompt = txtPrompt.text + " | " + buildScenePrompt()
                         local pyScript = ncScriptsDir + "api_render.py"
                         local outFile = (getDir #temp) + "/nc_api_result.json"
@@ -945,16 +761,16 @@ icon:#("NC_Render", 1)
                         if res[1] == 0 then
                         (
                             try ( uiPreview.bitmap = openBitmap outImg; lblStatus.text = "API Render xong." ) catch()
-                        ) else lblStatus.text = "API Lỗi: " + res[2]
+                        ) else lblStatus.text = "API Loi: " + res[2]
                     )
-                    catch (lblStatus.text = "Lỗi API call: " + (getCurrentException() as string))
+                    catch (lblStatus.text = "Loi API call: " + (getCurrentException() as string))
                 )
                 
                 "Gemini API":
                 (
                     try
                     (
-                        lblStatus.text = "Đang gửi request đến Gemini API..."
+                        lblStatus.text = "Dang gui request den Gemini API..."
                         local finalPrompt = txtPrompt.text + " | " + buildScenePrompt()
                         local pyScript = ncScriptsDir + "api_render.py"
                         local outFile = (getDir #temp) + "/nc_api_result.json"
@@ -964,16 +780,16 @@ icon:#("NC_Render", 1)
                         if res[1] == 0 then
                         (
                             try ( uiPreview.bitmap = openBitmap outImg; lblStatus.text = "API Render xong." ) catch()
-                        ) else lblStatus.text = "API Lỗi: " + res[2]
+                        ) else lblStatus.text = "API Loi: " + res[2]
                     )
-                    catch (lblStatus.text = "Lỗi API call: " + (getCurrentException() as string))
+                    catch (lblStatus.text = "Loi API call: " + (getCurrentException() as string))
                 )
             )
         )
         
         on btnRender2 pressed do
         (
-            lblStatus.text = "Đang xử lý render nhanh..."
+            lblStatus.text = "Dang xu ly render nhanh..."
             case renderMethod of
             (
                 "Corona GPU":
@@ -989,7 +805,7 @@ icon:#("NC_Render", 1)
                             local img = render()
                             if img != undefined do (uiPreview.bitmap = img; lblStatus.text = "Corona Interactive preview")
                         )
-                    ) catch (lblStatus.text = "Corona IR không khả dụng")
+                    ) catch (lblStatus.text = "Corona IR khong kha dung")
                 )
                 "V-Ray GPU":
                 (
@@ -1004,7 +820,7 @@ icon:#("NC_Render", 1)
                             local img = render()
                             if img != undefined do (uiPreview.bitmap = img; lblStatus.text = "V-Ray Interactive preview")
                         )
-                    ) catch (lblStatus.text = "V-Ray Interactive không khả dụng")
+                    ) catch (lblStatus.text = "V-Ray Interactive khong kha dung")
                 )
                 "Local SD (CUDA)":
                 (
@@ -1014,7 +830,7 @@ icon:#("NC_Render", 1)
                         local finalPrompt = txtPrompt.text + " | " + buildScenePrompt()
                         local pyScript = ncScriptsDir + "sd_generate.py"
                         local outFile = (getDir #temp) + "/nc_local_render.json"
-                        local cmdArgs = ("\"" + pyScript + "\" --prompt \"" + finalPrompt + "\" --width " + (spnWidth.value as string) + " --height " + (spnHeight.value as string) + " --upscale " + (ddlUpscale.selection as string) + " --output-json \"" + outFile + "\"")
+                        local cmdArgs = ("\"" + pyScript + "\" --prompt \"" + finalPrompt + "\" --upscale " + (ddlUpscale.selection as string) + " --output-json \"" + outFile + "\"")
                         
                         if chkDetail.checked do cmdArgs += " --detail"
                         if referenceImage != undefined then
@@ -1026,30 +842,32 @@ icon:#("NC_Render", 1)
                         local res = ncRunPython cmdArgs outFile
                         if res[1] == 0 then
                         (
-                            local pth = ncJsonImage outFile
-                            if pth != undefined and doesFileExist pth then
-                            (
-                                uiPreview.bitmap = openBitmap pth
-                                lblStatus.text = "Upscale xong: " + pth
-                            )
-                            else lblStatus.text = "Xong nhung khong doc duoc anh tu JSON"
+                            try (
+                                local f = openFile outFile; local j = readLine f; close f
+                                local p1 = findString j "\"image\":\""
+                                if p1 != undefined do (
+                                    p1 += 9; local p2 = findString (substring j p1 -1) "\""
+                                    uiPreview.bitmap = openBitmap (substring j p1 (p2-1))
+                                    lblStatus.text = "Upscale xong."
+                                )
+                            ) catch()
                         ) else lblStatus.text = "Loi: " + res[2]
-                    ) catch (lblStatus.text = "Lỗi: " + (getCurrentException() as string))
+                    ) catch (lblStatus.text = "Loi: " + (getCurrentException() as string))
                 )
                 "OpenRouter API":
                 (
-                    lblStatus.text = "OpenRouter: Không hỗ trợ upscale trực tiếp qua API."
+                    lblStatus.text = "OpenRouter: Khong ho tro upscale truc tiep qua API."
                 )
                 "Gemini API":
                 (
-                    lblStatus.text = "Gemini: Không hỗ trợ upscale trực tiếp qua API."
+                    lblStatus.text = "Gemini: Khong ho tro upscale truc tiep qua API."
                 )
             )
         )
         
         on btnRender3 pressed do
         (
-            lblStatus.text = "Đang xử lý render đầy đủ..."
+            lblStatus.text = "Dang xu ly render day du..."
             case renderMethod of
             (
                 "Corona GPU":
@@ -1063,7 +881,7 @@ icon:#("NC_Render", 1)
                         renderOutputResolution = [w, h]
                         renderers.current = renderers.Corona
                         
-                        lblStatus.text = "Đang render toàn cảnh..."
+                        lblStatus.text = "Dang render toan canh..."
                         local startTime = timeStamp()
                         local img = render()
                         local elapsed = (timeStamp() - startTime) / 1000.0
@@ -1079,8 +897,8 @@ icon:#("NC_Render", 1)
                                 save img
                                 close img
                             )
-                        ) else lblStatus.text = "Render thất bại"
-                    ) catch (lblStatus.text = "Lỗi: " + (getCurrentException() as string))
+                        ) else lblStatus.text = "Render that bai"
+                    ) catch (lblStatus.text = "Loi: " + (getCurrentException() as string))
                 )
                 "V-Ray GPU":
                 (
@@ -1105,7 +923,7 @@ icon:#("NC_Render", 1)
                                 close img
                             )
                         )
-                    ) catch (lblStatus.text = "Lỗi: " + (getCurrentException() as string))
+                    ) catch (lblStatus.text = "Loi: " + (getCurrentException() as string))
                 )
                 "Local SD (CUDA)":
                 (
@@ -1130,16 +948,16 @@ icon:#("NC_Render", 1)
                             cmdArgs += " --reference \"" + refPath + "\""
                         )
                         local res = ncRunPython cmdArgs outFile
-                        if res[1] == 0 then lblStatus.text = "Batch done." else lblStatus.text = "Lỗi batch: " + res[2]
-                    ) catch (lblStatus.text = "Lỗi batch: " + (getCurrentException() as string))
+                        if res[1] == 0 then lblStatus.text = "Batch done." else lblStatus.text = "Loi batch: " + res[2]
+                    ) catch (lblStatus.text = "Loi batch: " + (getCurrentException() as string))
                 )
                 "OpenRouter API":
                 (
-                    lblStatus.text = "OpenRouter: Không hỗ trợ batch."
+                    lblStatus.text = "OpenRouter: Khong ho tro batch."
                 )
                 "Gemini API":
                 (
-                    lblStatus.text = "Gemini: Không hỗ trợ batch."
+                    lblStatus.text = "Gemini: Khong ho tro batch."
                 )
             )
         )
@@ -1151,12 +969,9 @@ icon:#("NC_Render", 1)
         (
         -- Load cameras
             refreshCamList()
-        -- Load last width/height (renderWidth/renderHeight do applyResToMax giu trong lan chay truoc)
-            spnWidth.value = (if renderWidth == undefined then 1920 else renderWidth)
-            spnHeight.value = (if renderHeight == undefined then 1080 else renderHeight)
-            txtApiKey.text = apiKey
-            txtApiModel.text = apiModel
-            ddlApiProvider.selection = (if apiProvider == "gemini" then 2 else 1)
+        -- Load last width/height
+            spnWidth.value = renderWidth
+            spnHeight.value = renderHeight
             spnRatio.value = (renderWidth as float) / (renderHeight as float)
         -- Detect materials in scene
             scanMaterialsInScene()
@@ -1192,9 +1007,9 @@ icon:#("NC_Render", 1)
                     if hasProperty cam #vertical_tilt_correction do cam.vertical_tilt_correction = true
                     if hasProperty cam #tilt_correction_mode do cam.tilt_correction_mode = 1
                     if (classOf cam == Targetcamera or classOf cam == Freecamera) do addModifier cam (Camera_Correction())
-                    lblStatus.text = "Đã áp dụng 2-Point Perspective"
+                    lblStatus.text = "Da ap dung 2-Point Perspective"
                 )
-                catch (lblStatus.text = "Không thể áp dụng 2-Point")
+                catch (lblStatus.text = "Khong the ap dung 2-Point")
             )
             refreshPreviewDisplay()
         )
@@ -1220,7 +1035,7 @@ icon:#("NC_Render", 1)
             )
             else
             (
-                lblStatus.text = "Không thể capture viewport"
+                lblStatus.text = "Khong the capture viewport"
             )
         )
         

@@ -56,6 +56,27 @@ def get_model_path_local(model_key: str) -> Path:
         return None
 
 
+def _write_output_json(args, ok, image, message=""):
+    """Ghi JSON ket qua de macro 3ds Max doc duoc (field 'image' la uoc mo)."""
+    if not getattr(args, "output_json", None):
+        return
+    import json
+    try:
+        with open(args.output_json, "w", encoding="utf-8") as f:
+            json.dump({"ok": bool(ok), "image": image or "", "message": message}, f)
+        print("[output-json] " + str(args.output_json))
+    except Exception as e:
+        print("warn: cannot write output-json: " + str(e))
+
+
+def _default_output_path(args):
+    """Mac dinh PNG vao Temp de macro luon biet duong dan ket qua."""
+    if not args.output:
+        import tempfile
+        import time as _t
+        args.output = str(Path(tempfile.gettempdir()) / ("nc_sd_" + str(int(_t.time() * 1000)) + ".png"))
+    return args.output
+
 def cmd_generate(args):
     """Generate ảnh từ prompt — xử lý tất cả cases."""
     print("=" * 55)
@@ -98,6 +119,7 @@ def cmd_generate(args):
             print(f"❌ Error reading input JSON: {e}")
             return 1
 
+    _default_output_path(args)
     has_cuda, pt_ver = detect_pytorch_cuda()
     print(f"PyTorch CUDA: {'✅' if has_cuda else '❌'} ({pt_ver})")
 
@@ -138,7 +160,10 @@ def cmd_generate(args):
         print(result.stdout)
         if result.stderr:
             print("STDERR:", result.stderr)
-        return result.returncode
+        ok = result.returncode == 0 and Path(args.output).exists()
+        _write_output_json(args, ok, args.output if ok else "",
+                           (result.stdout[-500:] if ok else (result.stderr or "")[-500:]))
+        return 0 if ok else 1
 
     # Case 2: Có CUDA, model chưa local → tải model trước (HuggingFace)
     if has_cuda:
@@ -180,12 +205,16 @@ def cmd_generate(args):
         print(result.stdout)
         if result.stderr:
             print("STDERR:", result.stderr)
-        return result.returncode
+        ok = result.returncode == 0 and Path(args.output).exists()
+        _write_output_json(args, ok, args.output if ok else "",
+                           (result.stdout[-500:] if ok else (result.stderr or "")[-500:]))
+        return 0 if ok else 1
 
     # Case 4: Không có CUDA
     print("❌ Không có CUDA — không thể render local")
     print("  Gỡ về External API hoặc cài PyTorch CUDA:")
     print("  python3 -m pip install --upgrade torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128")
+    _write_output_json(args, False, "", "No CUDA / PyTorch CUDA not installed")
     return 1
 
 
@@ -197,6 +226,7 @@ def cmd_upscale(args):
 
     if not args.reference:
         print("❌ Cần reference image để upscale")
+        _write_output_json(args, False, "", "Can reference image de upscale")
         return 1
 
     # Tăng resolution 2x
@@ -244,7 +274,10 @@ def cmd_batch(args):
             print(f"  ✅ Prompt {i} OK")
 
     print(f"\nBatch done — output dir: {output_dir}")
-    return 0
+    pngs = sorted(str(x) for x in Path(output_dir).glob("batch_*.png"))
+    _write_output_json(args, len(pngs) > 0, pngs[0] if pngs else "",
+                       str(len(pngs)) + "/" + str(len(prompts)) + " images in " + output_dir)
+    return 0 if pngs else 1
 
 
 def main():
@@ -273,7 +306,9 @@ Usage từ 3ds Max macroScript:
     gen.add_argument("--output", type=str, default="", help="Output PNG path")
     gen.add_argument("--reference", type=str, default="", help="Reference image (img2img)")
     gen.add_argument("--strength", type=float, default=None, help="Denoising strength 0-1")
-    gen.add_argument("--upscale", action="store_true", help="Upscale mode")
+    gen.add_argument("--upscale", type=int, default=1, help="Upscale factor (1=off, 2/4=factor)")
+    gen.add_argument("--detail", action="store_true", help="Detail enhancement")
+    gen.add_argument("--tile", action="store_true", help="Tile-based upscaling")
     gen.add_argument("--input-json", type=str, default=None,
                     help="Input JSON file (instead of cmdline args)")
     gen.add_argument("--output-json", type=str, default=None,
@@ -283,7 +318,7 @@ Usage từ 3ds Max macroScript:
 
     if args.prompts:
         return cmd_batch(args)
-    elif args.upscale or args.reference:
+    elif (args.upscale is not None and args.upscale > 1) or args.reference:
         return cmd_upscale(args)
     elif args.prompt:
         return cmd_generate(args)
