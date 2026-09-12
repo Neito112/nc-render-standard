@@ -39,6 +39,10 @@ def check(name, code):
                   r"\btrim\s*\(", r"trimString", r"\.startsWith\b", r"\.contains\b", r"\bignore\s*\("]:
         if re.search(ghost, code_nc):
             problems.append(f"goi '{ghost}' — ham ma da kiem chung bang 3dsmaxbatch, khong duoc ton tai")
+    # 2c. widget khai bao dang '(expr)' o vi tri text -> rollout clause syntax error
+    for i, line in enumerate(code.splitlines(), 1):
+        if re.match(r'\s*(label|button|checkbox|checkbutton|edittext|radiobuttons|dropdownList|spinner|slider|colorpicker|imagebutton|viewport|groupbox|textbutton|lightbox|curveControl|multiselectlist|listbox|progressBar|hyperLink)\s+\w+\s+\(', line):
+            problems.append(f"L{i}: widget 'name (expr)' o vi tri text — rollout clause can string literal, gan .text trong on create")
     # 3. fn defined AFTER first use at execution level? (rough: fn X vs bare X call)
     defs = set(re.findall(r"\bfn\s+(\w+)", code))
     for d in defs:

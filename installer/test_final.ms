@@ -3,23 +3,26 @@
     local out = createFile (PROJ + "/installer/test_final.txt")
     fn logIt s = ( format "%\n" s to:out; flush out )
 
-    -- Nap ban .mcr TU ZIP MOI bang macros.load (dung API that, giong installer)
+    -- Nap thang file zip-copy vao macros system (xoa ban cu trong usermacros truoc khi run)
     local tmpMcr = PROJ + "/installer/_zipcopy.mcr"
-    logIt ("LOAD_zipcopy: " + (try ( macros.load tmpMcr; "PASS" ) catch ("FAIL: " + (getCurrentException() as string))))
+    rltNCRenderPro_v1 = undefined
+    logIt ("LOAD: " + (try ( macros.load tmpMcr; "ok" ) catch ("EXC: " + (getCurrentException() as string))))
 
-    -- Chay macroScript (bam nut): bao gom toan bo rollout + createDialog
-    logIt ("RUN_macro: " + (try
-    (
-        macros.run "NC-Render AI" "NCRenderSmartBridge_v1"
-        "PASS - khong exception"
-    ) catch ("EXCEPTION: " + (getCurrentException() as string))))
+    -- Chay body macro
+    logIt ("RUN: " + (try ( macros.run "NC-Render AI" "NCRenderSmartBridge_v1"; "ok" ) catch ("EXC: " + (getCurrentException() as string))))
+    logIt ("GLOBAL: " + (try ( classOf rltNCRenderPro_v1 as string ) catch ("EXC")))
 
-    -- Neu dialog ton tai sau khi run => giao dien da mo duoc
-    logIt ("DIALOG_STATE: " + (try
+    -- Neu van undefined: thu doString toan bo body cua macro (bo qua registry)
+    if rltNCRenderPro_v1 == undefined then
     (
-        if rltNCRenderPro_v1 == undefined then "undefined"
-        else "class: " + (classOf rltNCRenderPro_v1 as string)
-    ) catch ("EXC: " + (getCurrentException() as string))))
+        local f = openFile tmpMcr mode:"r"
+        local code = ""
+        while not (eof f) do code += readLine f + "\n"
+        close f
+        -- tach phan trong ngoac lon cua macroScript: tu '(' dau sau header den ')' cuoi
+        logIt ("DOSTRING: " + (try ( doString code; "ok" ) catch ("EXC: " + (getCurrentException() as string))))
+        logIt ("GLOBAL2: " + (try ( classOf rltNCRenderPro_v1 as string ) catch ("EXC")))
+    )
 
     logIt "FINAL_DONE"
     close out
