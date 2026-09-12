@@ -37,9 +37,9 @@
     -- ===== QUET BAN CU =====
     local foundOld = #()
 
-    for f in (getFiles (umDir + "/NC_Render*.mcr")) do appendIfNotFound foundOld f
-    for f in (getFiles (umDir + "/NC_Render*.ms")) do appendIfNotFound foundOld f
-    for f in (getFiles (umDir + "/_render_feedback*")) do appendIfNotFound foundOld f
+    for f in (getFiles (umDir + "/NC_Render*.mcr")) do appendIfUnique foundOld f
+    for f in (getFiles (umDir + "/NC_Render*.ms")) do appendIfUnique foundOld f
+    for f in (getFiles (umDir + "/_render_feedback*")) do appendIfUnique foundOld f
 
     local uninstFile = umDir + "/uninstall.ms"
     if (doesFileExist uninstFile) then
@@ -51,25 +51,25 @@
             while not (eof fh) do txt += readLine fh + "\n"
             close fh
             if (matchPattern txt pattern:"*NC-Render*") or (matchPattern txt pattern:"*NCRender*") then
-                appendIfNotFound foundOld uninstFile
+                appendIfUnique foundOld uninstFile
         )
     )
 
     local us = getDir #userScripts
-    for f in (getFiles (us + "/sd_generate.py")) do appendIfNotFound foundOld f
-    for f in (getFiles (us + "/sd_batch.py")) do appendIfNotFound foundOld f
-    for f in (getFiles (us + "/cuda_auto_install.py")) do appendIfNotFound foundOld f
-    for f in (getFiles (us + "/nc_cuda_render.py")) do appendIfNotFound foundOld f
-    for f in (getFiles (us + "/github_update.py")) do appendIfNotFound foundOld f
-    for f in (getFiles (us + "/_setup_download.py")) do appendIfNotFound foundOld f
+    for f in (getFiles (us + "/sd_generate.py")) do appendIfUnique foundOld f
+    for f in (getFiles (us + "/sd_batch.py")) do appendIfUnique foundOld f
+    for f in (getFiles (us + "/cuda_auto_install.py")) do appendIfUnique foundOld f
+    for f in (getFiles (us + "/nc_cuda_render.py")) do appendIfUnique foundOld f
+    for f in (getFiles (us + "/github_update.py")) do appendIfUnique foundOld f
+    for f in (getFiles (us + "/_setup_download.py")) do appendIfUnique foundOld f
 
     local ncFolder = us + "/NC-Render"
-    if (doesFileExist (ncFolder + "/")) do appendIfNotFound foundOld ncFolder
+    if (doesFileExist (ncFolder + "/")) do appendIfUnique foundOld ncFolder
 
-    for f in (getFiles ((getDir #userIcons) + "/NC_Render_*.*")) do appendIfNotFound foundOld f
+    for f in (getFiles ((getDir #userIcons) + "/NC_Render_*.*")) do appendIfUnique foundOld f
 
     local apDir = "C:/ProgramData/Autodesk/ApplicationPlugins/NC_Render_Standard"
-    if (doesFileExist (apDir + "/")) do appendIfNotFound foundOld apDir
+    if (doesFileExist (apDir + "/")) do appendIfUnique foundOld apDir
 
     -- ===== QUYET DINH =====
     local dstMcr = umDir + "/NC_Render_Bridge_v1.mcr"
