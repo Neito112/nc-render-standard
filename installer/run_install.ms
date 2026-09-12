@@ -28,11 +28,12 @@ if NCRenderDryRun != true then
     (
         if (doesFileExist srcPath) then
         (
-            -- 2 file macroScript: ban duong + ban dang ky theo ten
-            -- "<Category>-<MacroName>.mcr" (Max luong ten nay khi quet usermacros
-            -- luc khoi dong; thieu no = plugin mat sau restart!)
-            copyFile srcPath dstMcr
+            -- MO file dang ky duy nhat: "<Category>-<MacroName>.mcr"
+            -- (Max luong ten nay khi quet usermacros luc khoi dong; thieu no =
+            --  plugin mat sau restart. 2 file trung 1 macro = button bo vao
+            --  ban orphan -> CHI ghi file dang ky, xoa het ban Bridge cu.)
             copyFile srcPath regMcr
+            if (doesFileExist dstMcr) do (try (deleteFile dstMcr) catch())
             -- copy icons (package co usericons/)
             local icSrc = thisDir + "usericons"
             if (doesFileExist (icSrc + "/")) then
@@ -41,7 +42,7 @@ if NCRenderDryRun != true then
                 for icf in (getFiles (icSrc + "/*.png")) do
                     copyFile icf (icDst + "/" + (filenameFromPath icf))
             )
-            macros.load dstMcr
+            macros.load regMcr
             local opened = try ( macros.run "NC-Render AI" "NCRenderSmartBridge_v1"; true ) catch ( false )
             if opened then
                 messageBox "NC-Render AI Studio v1.5.2 cai dat thanh cong!\n\nCua so NC-Render dang mo.\n\nLan sau: Customize > Customize User Interface > Toolbars\n> tab Custom, category NC-Render AI > keo button 'NC-Render v1'\nra toolbar, hoac chay: macros.run \"NC-Render AI\" \"NCRenderSmartBridge_v1\"" title:"NC-Render Install"
@@ -70,6 +71,7 @@ if NCRenderDryRun != true then
 
     -- chi xo ban Bridge cu, GIU file dang ky 'NC_Render AI-*' (no la plugin dang chay)
     for f in (getFiles (umDir + "/NC_Render_Bridge*.mcr")) do addUnique foundOld f
+    for f in (getFiles (umDir + "/NC_Render AI-*.mcr")) do addUnique foundOld f
     for f in (getFiles (umDir + "/NC_Render*.ms")) do addUnique foundOld f
     for f in (getFiles (umDir + "/_render_feedback*")) do addUnique foundOld f
 
