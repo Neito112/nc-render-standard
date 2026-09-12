@@ -1325,5 +1325,24 @@ icon:#("NC_Render", 1)
         // ============================================================
     )
     
-    createDialog rltNCRenderPro_v1
+    on execute do
+    (
+        try
+        (
+            if rltNCRenderPro_v1 == undefined then
+                throw "NC_Render rollout class missing (reload the .mcr)"
+            createDialog rltNCRenderPro_v1
+            dlgNCRenderHwnd = (try (windows.getMaxHWND rltNCRenderPro_v1) catch undefined)
+            if dlgNCRenderHwnd == undefined do
+                format "NC-Render: createDialog ran but no window handle.
+"
+        )
+        catch
+        (
+            format "NC-Render dialog FAILED: %
+" (getCurrentException())
+            messageBox ("NC-Render AI cannot open:
+" + getCurrentException()) title:"NC-Render AI"
+        )
+    )
 )
