@@ -21,7 +21,12 @@
         (
             copyFile srcPath dstPath
             macros.load dstPath
-            messageBox "NC-Render AI Studio v1.4 cai dat thanh cong!\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category NC-Render AI\n> keo button 'NC-Render v1' ra toolbar." title:"NC-Render Install"
+            -- Mo ngay giao dung: macros.run la ham THAT cua struct macros
+            local opened = try (macros.run "NC-Render AI" "NCRenderSmartBridge_v1"; true) catch (false)
+            if opened then
+                messageBox "NC-Render AI Studio v1.4 cai dat thanh cong!\n\nCua so NC-Render dang mo.\n\nLan sau: Customize > Customize User Interface > Toolbars\n> tab Custom, category NC-Render AI > keo button 'NC-Render v1' ra toolbar,\nhoac chay: macros.run \"NC-Render AI\" \"NCRenderSmartBridge_v1\"" title:"NC-Render Install"
+            else
+                messageBox "Da cai dat xong, nhung khong tu mo duoc cua so.\n\nMo thu bang cach:\n1. Customize > Customize User Interface > Toolbars\n2. tab Custom, category 'NC-Render AI'\n3. keo button 'NC-Render v1' ra toolbar roi bam.\n\nHoac go vao Listener (F11):\nmacros.run \"NC-Render AI\" \"NCRenderSmartBridge_v1\"" title:"NC-Render Install"
             true
         )
         else
