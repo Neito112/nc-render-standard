@@ -3,13 +3,18 @@
 -- Cach dung: 3ds Max -> Scripting > Run Script -> chon file nay
 
 (
+    fn addUnique arr val =
+    (
+        if ((findItem arr val) == 0) do append arr val
+    )
+
     local found = #()
 
     -- 1. usermacros: macroScript + rac install cu
     local umDir = getDir #usermacros
-    for f in (getFiles (umDir + "/NC_Render*.mcr")) do appendIfUnique found f
-    for f in (getFiles (umDir + "/NC_Render*.ms"))  do appendIfUnique found f
-    for f in (getFiles (umDir + "/_render_feedback*")) do appendIfUnique found f
+    for f in (getFiles (umDir + "/NC_Render*.mcr")) do addUnique found f
+    for f in (getFiles (umDir + "/NC_Render*.ms"))  do addUnique found f
+    for f in (getFiles (umDir + "/_render_feedback*")) do addUnique found f
 
     -- uninstall.ms: chi go neu la cua NC-Render (doc noi dung kiem tra)
     local uninstFile = umDir + "/uninstall.ms"
@@ -22,31 +27,31 @@
             while not (eof fh) do txt += readLine fh + "\n"
             close fh
             if (matchPattern txt pattern:"*NC-Render*") or (matchPattern txt pattern:"*NCRender*") then
-                appendIfUnique found uninstFile
+                addUnique found uninstFile
         )
     )
 
     -- 2. scripts: python cua install cu
     local scrDir = getDir #userScripts
-    for f in (getFiles (scrDir + "/sd_generate.py"))      do appendIfUnique found f
-    for f in (getFiles (scrDir + "/sd_batch.py"))         do appendIfUnique found f
-    for f in (getFiles (scrDir + "/cuda_auto_install.py")) do appendIfUnique found f
-    for f in (getFiles (scrDir + "/nc_cuda_render.py"))   do appendIfUnique found f
-    for f in (getFiles (scrDir + "/github_update.py"))    do appendIfUnique found f
-    for f in (getFiles (scrDir + "/_setup_download.py"))  do appendIfUnique found f
+    for f in (getFiles (scrDir + "/sd_generate.py"))      do addUnique found f
+    for f in (getFiles (scrDir + "/sd_batch.py"))         do addUnique found f
+    for f in (getFiles (scrDir + "/cuda_auto_install.py")) do addUnique found f
+    for f in (getFiles (scrDir + "/nc_cuda_render.py"))   do addUnique found f
+    for f in (getFiles (scrDir + "/github_update.py"))    do addUnique found f
+    for f in (getFiles (scrDir + "/_setup_download.py"))  do addUnique found f
 
     -- 3. folder rac scripts/NC-Render
     local ncFolder = scrDir + "/NC-Render"
-    if (doesFileExist (ncFolder + "/")) do appendIfUnique found ncFolder
+    if (doesFileExist (ncFolder + "/")) do addUnique found ncFolder
 
     -- 4. usericons
-    for f in (getFiles ((getDir #userIcons) + "/NC_Render_*.*")) do appendIfUnique found f
+    for f in (getFiles ((getDir #userIcons) + "/NC_Render_*.*")) do addUnique found f
 
     -- 5. ApplicationPlugins package cu
     local apDir = @"C:\ProgramData\Autodesk\ApplicationPlugins\NC_Render_Standard"
-    if (doesFileExist (apDir + "/")) do appendIfUnique found apDir
+    if (doesFileExist (apDir + "/")) do addUnique found apDir
     local apDir2 = @"C:\ProgramData\Autodesk\ApplicationPlugins\nc_render_standard"
-    if (apDir2 != apDir and (doesFileExist (apDir2 + "/"))) do appendIfUnique found apDir2
+    if (apDir2 != apDir and (doesFileExist (apDir2 + "/"))) do addUnique found apDir2
 
     -- Ket luan
     if found.count == 0 then

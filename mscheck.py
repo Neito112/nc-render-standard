@@ -33,6 +33,10 @@ def check(name, code):
     op, cl = j.count("("), j.count(")")
     if op != cl:
         problems.append(f"paren unbalanced: {op} vs {cl}")
+    # 2b. goi ten built-in "ho" da gay undefined trong thuc te
+    for ghost in ["appendIfNotFound", "appendIfUnique", "appendUnique"]:
+        if re.search(r"\b" + ghost + r"\b", code):
+            problems.append(f"goi '{ghost}' — ten built-in khong dang tin cay, dung addUnique tu viet (findItem+append)")
     # 3. fn defined AFTER first use at execution level? (rough: fn X vs bare X call)
     defs = set(re.findall(r"\bfn\s+(\w+)", code))
     for d in defs:

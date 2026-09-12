@@ -4,6 +4,13 @@
 -- trong string), newline trong chuoi viet bang escape \n (2 ky tu).
 
 (
+    -- Helper tu viet: KHONG tin vao built-in nho ten (da co 2 ten ho gay
+    -- 'got: undefined'). chi dung findItem/append — co trong moi ban Max.
+    fn addUnique arr val =
+    (
+        if ((findItem arr val) == 0) do append arr val
+    )
+
     local thisDir = getFilenamePath (getThisScriptFilename())
     local srcMcr = thisDir + "usermacros/NC_Render_Bridge_v1.mcr"
     local umDir = getDir #usermacros
@@ -37,9 +44,9 @@
     -- ===== QUET BAN CU =====
     local foundOld = #()
 
-    for f in (getFiles (umDir + "/NC_Render*.mcr")) do appendIfUnique foundOld f
-    for f in (getFiles (umDir + "/NC_Render*.ms")) do appendIfUnique foundOld f
-    for f in (getFiles (umDir + "/_render_feedback*")) do appendIfUnique foundOld f
+    for f in (getFiles (umDir + "/NC_Render*.mcr")) do addUnique foundOld f
+    for f in (getFiles (umDir + "/NC_Render*.ms")) do addUnique foundOld f
+    for f in (getFiles (umDir + "/_render_feedback*")) do addUnique foundOld f
 
     local uninstFile = umDir + "/uninstall.ms"
     if (doesFileExist uninstFile) then
@@ -51,25 +58,25 @@
             while not (eof fh) do txt += readLine fh + "\n"
             close fh
             if (matchPattern txt pattern:"*NC-Render*") or (matchPattern txt pattern:"*NCRender*") then
-                appendIfUnique foundOld uninstFile
+                addUnique foundOld uninstFile
         )
     )
 
     local us = getDir #userScripts
-    for f in (getFiles (us + "/sd_generate.py")) do appendIfUnique foundOld f
-    for f in (getFiles (us + "/sd_batch.py")) do appendIfUnique foundOld f
-    for f in (getFiles (us + "/cuda_auto_install.py")) do appendIfUnique foundOld f
-    for f in (getFiles (us + "/nc_cuda_render.py")) do appendIfUnique foundOld f
-    for f in (getFiles (us + "/github_update.py")) do appendIfUnique foundOld f
-    for f in (getFiles (us + "/_setup_download.py")) do appendIfUnique foundOld f
+    for f in (getFiles (us + "/sd_generate.py")) do addUnique foundOld f
+    for f in (getFiles (us + "/sd_batch.py")) do addUnique foundOld f
+    for f in (getFiles (us + "/cuda_auto_install.py")) do addUnique foundOld f
+    for f in (getFiles (us + "/nc_cuda_render.py")) do addUnique foundOld f
+    for f in (getFiles (us + "/github_update.py")) do addUnique foundOld f
+    for f in (getFiles (us + "/_setup_download.py")) do addUnique foundOld f
 
     local ncFolder = us + "/NC-Render"
-    if (doesFileExist (ncFolder + "/")) do appendIfUnique foundOld ncFolder
+    if (doesFileExist (ncFolder + "/")) do addUnique foundOld ncFolder
 
-    for f in (getFiles ((getDir #userIcons) + "/NC_Render_*.*")) do appendIfUnique foundOld f
+    for f in (getFiles ((getDir #userIcons) + "/NC_Render_*.*")) do addUnique foundOld f
 
     local apDir = "C:/ProgramData/Autodesk/ApplicationPlugins/NC_Render_Standard"
-    if (doesFileExist (apDir + "/")) do appendIfUnique foundOld apDir
+    if (doesFileExist (apDir + "/")) do addUnique foundOld apDir
 
     -- ===== QUYET DINH =====
     local dstMcr = umDir + "/NC_Render_Bridge_v1.mcr"
