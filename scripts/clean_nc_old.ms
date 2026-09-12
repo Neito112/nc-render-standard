@@ -73,7 +73,7 @@
                     ok = deleteFile f
                 if ok do okCount += 1
             )
-            macros.reload()
+            -- (Max tu dong nhan macroScript moi khi restart hoac macros.load)
             messageBox ("Da go " + (okCount as string) + "/" + (found.count as string) + " thanh phan.\n\nRestart 3ds Max lan nua roi cai ban moi.") title:"NC-Render Cleanup"
         )
     )

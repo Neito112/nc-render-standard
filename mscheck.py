@@ -34,7 +34,7 @@ def check(name, code):
     if op != cl:
         problems.append(f"paren unbalanced: {op} vs {cl}")
     # 2b. goi ten built-in "ho" da gay undefined trong thuc te
-    for ghost in ["appendIfNotFound", "appendIfUnique", "appendUnique"]:
+    for ghost in ["appendIfNotFound", "appendIfUnique", "appendUnique", "macros\\.reload"]:
         if re.search(r"\b" + ghost + r"\b", code):
             problems.append(f"goi '{ghost}' — ten built-in khong dang tin cay, dung addUnique tu viet (findItem+append)")
     # 3. fn defined AFTER first use at execution level? (rough: fn X vs bare X call)

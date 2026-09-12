@@ -20,7 +20,7 @@
         if (doesFileExist srcPath) then
         (
             copyFile srcPath dstPath
-            macros.reload()
+            macros.load dstPath
             messageBox "NC-Render AI Studio v1.4 cai dat thanh cong!\n\nMo: Customize > Customize User Interface > Toolbars\n> tab Custom, category NC-Render AI\n> keo button 'NC-Render v1' ra toolbar." title:"NC-Render Install"
             true
         )
@@ -38,7 +38,6 @@
             if (doesFileExist (f + "/")) then (try (deleteDirectory f) catch())
             else (try (deleteFile f) catch())
         )
-        macros.reload()
     )
 
     -- ===== QUET BAN CU =====
