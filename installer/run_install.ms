@@ -1,11 +1,18 @@
--- run_install.ms -- NC-Render AI Studio v1.4 installer
+-- run_install.ms -- NC-Render AI Studio v1.5.2 installer
 -- Chay sau khi mzp.run giai nen archive vao $temp\NCRender_install
--- QUY TAC: chi dung messageBox/queryBox, duong dan dau / (khong backslash
--- trong string), newline trong chuoi viet bang escape \n (2 ky tu).
+-- QUY TAC: chi dung messageBox/queryBox, duong dan dau / (khong backslash trong
+-- string), newline viet escape \n (2 ky tu).
+-- GUAN AN TOAN: fileIn/evaluate se CHAY THAT toan bo script nay; quiet mode tu
+-- dong tra 'Yes' cho moi queryBox -> purge xoa de tro. MOI test compile phai dat
+--   global NCRenderDryRun = true   TRUOC khi fileIn (khong bao gio fileIn tran).
 
+if NCRenderDryRun != true then
 (
-    -- Helper tu viet: KHONG tin vao built-in nho ten (da co 2 ten ho gay
-    -- 'got: undefined'). chi dung findItem/append — co trong moi ban Max.
+    -- Helper tu viet, chi dung ham da kiem chung ton tai:
+    -- findItem / append / getFiles / doesFileExist / copyFile / deleteFile /
+    -- deleteDirectory / matchPattern / openFile / eof / readLine / close /
+    -- getDir / filenameFromPath / getFilenamePath / getThisScriptFilename /
+    -- messageBox / queryBox / macros.load / macros.run
     fn addUnique arr val =
     (
         if ((findItem arr val) == 0) do append arr val
@@ -14,13 +21,19 @@
     local thisDir = getFilenamePath (getThisScriptFilename())
     local srcMcr = thisDir + "usermacros/NC_Render_Bridge_v1.mcr"
     local umDir = getDir #usermacros
+    local dstMcr = umDir + "/NC_Render_Bridge_v1.mcr"
+    local regMcr = umDir + "/NC_Render AI-NCRenderSmartBridge_v1.mcr"
 
-    fn doInstall srcPath dstPath =
+    fn doInstall srcPath =
     (
         if (doesFileExist srcPath) then
         (
-            copyFile srcPath dstPath
-            -- copy icons (neu package co usericons/)
+            -- 2 file macroScript: ban duong + ban dang ky theo ten
+            -- "<Category>-<MacroName>.mcr" (Max luong ten nay khi quet usermacros
+            -- luc khoi dong; thieu no = plugin mat sau restart!)
+            copyFile srcPath dstMcr
+            copyFile srcPath regMcr
+            -- copy icons (package co usericons/)
             local icSrc = thisDir + "usericons"
             if (doesFileExist (icSrc + "/")) then
             (
@@ -28,13 +41,12 @@
                 for icf in (getFiles (icSrc + "/*.png")) do
                     copyFile icf (icDst + "/" + (filenameFromPath icf))
             )
-            macros.load dstPath
-            -- Mo ngay giao dung: macros.run la ham THAT cua struct macros
-            local opened = try (macros.run "NC-Render AI" "NCRenderSmartBridge_v1"; true) catch (false)
+            macros.load dstMcr
+            local opened = try ( macros.run "NC-Render AI" "NCRenderSmartBridge_v1"; true ) catch ( false )
             if opened then
-                messageBox "NC-Render AI Studio v1.4 cai dat thanh cong!\n\nCua so NC-Render dang mo.\n\nLan sau: Customize > Customize User Interface > Toolbars\n> tab Custom, category NC-Render AI > keo button 'NC-Render v1' ra toolbar,\nhoac chay: macros.run \"NC-Render AI\" \"NCRenderSmartBridge_v1\"" title:"NC-Render Install"
+                messageBox "NC-Render AI Studio v1.5.2 cai dat thanh cong!\n\nCua so NC-Render dang mo.\n\nLan sau: Customize > Customize User Interface > Toolbars\n> tab Custom, category NC-Render AI > keo button 'NC-Render v1'\nra toolbar, hoac chay: macros.run \"NC-Render AI\" \"NCRenderSmartBridge_v1\"" title:"NC-Render Install"
             else
-                messageBox "Da cai dat xong, nhung khong tu mo duoc cua so.\n\nMo thu bang cach:\n1. Customize > Customize User Interface > Toolbars\n2. tab Custom, category 'NC-Render AI'\n3. keo button 'NC-Render v1' ra toolbar roi bam.\n\nHoac go vao Listener (F11):\nmacros.run \"NC-Render AI\" \"NCRenderSmartBridge_v1\"" title:"NC-Render Install"
+                messageBox "Da cai dat xong, nhung khong tu mo duoc cua so.\n\nMo thu:\n1. Customize > Customize User Interface > Toolbars\n2. tab Custom, category 'NC-Render AI'\n3. keo button 'NC-Render v1' ra toolbar roi bam.\n\nHoac go vao Listener (F11):\nmacros.run \"NC-Render AI\" \"NCRenderSmartBridge_v1\"" title:"NC-Render Install"
             true
         )
         else
@@ -53,10 +65,11 @@
         )
     )
 
-    -- ===== QUET BAN CU =====
+    -- ===== QUET BAN CU (truy tuyen: KHONG quet vao ten dang ky macro!) =====
     local foundOld = #()
 
-    for f in (getFiles (umDir + "/NC_Render*.mcr")) do addUnique foundOld f
+    -- chi xo ban Bridge cu, GIU file dang ky 'NC_Render AI-*' (no la plugin dang chay)
+    for f in (getFiles (umDir + "/NC_Render_Bridge*.mcr")) do addUnique foundOld f
     for f in (getFiles (umDir + "/NC_Render*.ms")) do addUnique foundOld f
     for f in (getFiles (umDir + "/_render_feedback*")) do addUnique foundOld f
 
@@ -91,11 +104,9 @@
     if (doesFileExist (apDir + "/")) do addUnique foundOld apDir
 
     -- ===== QUYET DINH =====
-    local dstMcr = umDir + "/NC_Render_Bridge_v1.mcr"
-
     if (foundOld.count == 0) then
     (
-        doInstall srcMcr dstMcr
+        doInstall srcMcr
     )
     else
     (
@@ -107,7 +118,7 @@
         if doRemove then
         (
             purgeOld foundOld
-            doInstall srcMcr dstMcr
+            doInstall srcMcr
         )
         else
         (
