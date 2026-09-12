@@ -33,3 +33,11 @@ nc_render_config.txt
 installer/_zipcopy.mcr
 installer/test_*.txt
 installer/batch_out.txt
+output.json
+scripts/scratch_*.py
+scripts/debug_out.txt
+installer/_head_v16.mcr
+installer/current_ui_block.txt
+installer/agy_*.log
+installer/probe_v3.*
+installer/*.bak*
