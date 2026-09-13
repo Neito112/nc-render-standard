@@ -742,7 +742,7 @@ icon:#("NC_Render", 1)
                 local cfgPath = (getDir #temp) + "/nc_render_config.txt"
                 local f = createFile cfgPath
                 writeLine f (renderMethod as string)
-                writeLine f (if ddlApiProvider != undefined then (case ddlApiProvider.selection of (1:"openrouter", 2:"gemini", default:"openrouter")) else "openrouter")
+                writeLine f (if ddlApiProvider != undefined and ddlApiProvider.selection == 2 then "gemini" else "openrouter")
                 writeLine f (apiKey as string)
                 writeLine f (if txtApiModel != undefined then txtApiModel.text else apiModel)
                 writeLine f (gpuName as string)
@@ -1299,15 +1299,11 @@ icon:#("NC_Render", 1)
             if rltNCRenderPro_v1 == undefined then
                 throw "NC_Render rollout class missing (reload the .mcr)"
             createDialog rltNCRenderPro_v1
-            dlgNCRenderHwnd = (try (windows.getMaxHWND rltNCRenderPro_v1) catch undefined)
-            if dlgNCRenderHwnd == undefined do
-                format "NC-Render: createDialog ran but no window handle.
-"
         )
         catch
         (
             format "NC-Render dialog FAILED: %\n" (getCurrentException())
-            messageBox ("NC-Render AI cannot open:\n" + getCurrentException()) title:"NC-Render AI"
+            messageBox ("NC-Render AI cannot open: " + (getCurrentException() as string)) title:"NC-Render AI"
         )
     )
 )

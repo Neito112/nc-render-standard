@@ -1,0 +1,7 @@
+(fileIn @"C:\Users\HOMIE\AppData\Local\Autodesk\3dsMax\2024 - 64bit\ENU\usermacros\NC_Render AI-NCRenderSmartBridge_v1.mcr")
+(format "PROBE_BEFORE: class=%\n" (classof rltNCRenderPro_v1))
+(local ok = try ( macros.run "NC-Render AI" "NCRenderSmartBridge_v1" ) catch ("RUNEXC: " + (getCurrentException() as string)))
+(format "PROBE_RUN: %\n" (ok as string))
+(format "PROBE_AFTER: class=%\n" (classof rltNCRenderPro_v1))
+(format "PROBE_HWN: %\n" (try (windows.getMaxHWND rltNCRenderPro_v1) catch "EXC"))
+(format "PROBE_DONE\n")
