@@ -1,0 +1,5 @@
+START cfgMethod=Corona GPU
+B1_RUN: true
+B2_CREATE: OK
+B3_STATE: method=Corona GPU sel=1 grp=false key=false prov=false model=false save=false spnW=true keyTxt=k modelTxt=m renderer=Arnold
+B9_DONE

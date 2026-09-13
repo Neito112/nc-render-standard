@@ -1,0 +1,5 @@
+START cfgMethod=OpenRouter API
+B1_RUN: true
+B2_CREATE: OK
+B3_STATE: method=OpenRouter API sel=4 grp=true key=true prov=true model=true save=true spnW=true keyTxt=sk-or-TEST modelTxt=gemini-pro-img renderer=Arnold
+B9_DONE

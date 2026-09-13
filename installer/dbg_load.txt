@@ -1,0 +1,4 @@
+step1 FILEIN-OK
+step2 corona=undefined
+step3 vray=undefined
+step4 fnT=UNDEF/EXC

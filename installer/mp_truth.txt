@@ -1,0 +1,7 @@
+A 2-arg = EXC:-- Argument count error: MatchPattern wanted 1, got 2
+B reversed = EXC:-- Argument count error: MatchPattern wanted 1, got 2
+C named both = EXC:-- Argument count error: MatchPattern wanted 1, got 0
+D str+pattern = true
+E dotnet-string = EXC:-- Unknown property: "match" in "V_Ray_6__update_2_1"
+F findString = true
+G noop = OK

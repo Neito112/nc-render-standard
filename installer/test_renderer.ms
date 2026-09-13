@@ -1,0 +1,21 @@
+RR_CLASS: Default_Scanline_Renderer
+RR_CLASS: VUE_File_Renderer
+RR_CLASS: Quicksilver_Hardware_Renderer
+RR_CLASS: A360_Cloud_Rendering
+RR_CLASS: Corona
+RR_CLASS: V_Ray_GPU_6__update_2_1
+RR_CLASS: V_Ray_6__update_2_1
+RR_CLASS: ART_Renderer
+RR_CLASS: Arnold
+RR_CLASS: Missing_Renderer
+ERR2: -- No "map" function for #Struct:renderers(
+  target:<systemGlobal>; Public,
+  current:<systemGlobal>; Public,
+  medit:<systemGlobal>; Public,
+  activeShade:<systemGlobal>; Public,
+  renderDialogMode:<systemGlobal>; Public,
+  production:<systemGlobal>; Public,
+  renderButtonText:<systemGlobal>; Public,
+  medit_locked:<systemGlobal>; Public,
+  ClearDraftRenderer:<fn>; Public,
+  GetDraftRenderer:<fn>; Public)

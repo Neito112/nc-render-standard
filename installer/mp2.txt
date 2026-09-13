@@ -1,0 +1,3 @@
+fileIn=OK gNCFP1=undefined
+macros.run=OK gNCFP1=undefined
+gNCFP2=undefined

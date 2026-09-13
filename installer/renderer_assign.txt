@@ -1,0 +1,7 @@
+1 matchPattern src-first = EXC:-- Argument count error: MatchPattern wanted 1, got 2
+2 matchPattern named = EXC:-- Argument count error: MatchPattern wanted 1, got 0
+3 Corona symbol = RendererClass
+4 Corona() instance = Corona
+5 assign current=Corona class = EXC:-- Unable to convert: Corona to type: Renderer
+6 assign current=Corona() inst = Corona
+7 setRenderer-style = V_Ray_GPU_6__update_2_1

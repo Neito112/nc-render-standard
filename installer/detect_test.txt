@@ -1,0 +1,4 @@
+RUN = true
+CORONA_INSTALLED = undefined
+VRAY_INSTALLED = undefined
+RE-CHECK corona hits = 1

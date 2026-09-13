@@ -94,7 +94,11 @@ icon:#("NC_Render", 1)
             lblGPUInfo.text = "GPU: " + gpuName
             lblGPUMemory.text = "VRAM: " + gpuMemory + " MB"
             lblCUDAStatus.text = "CUDA: " + (if hasCUDA == "true" then "Active" else "Not available")
-            -- btnRender texts gan trong open (updateUIForMethod)
+            
+            chkCorona.checked = (coronaInstalled == "true")
+            chkCorona.enabled = (coronaInstalled == "true" or hasCUDA == "true")
+            chkVray.checked = (vrayInstalled == "true")
+            chkVray.enabled = (vrayInstalled == "true" or hasCUDA == "true")
         )
         -- --- COLUMN LEFT: CONTROL PANEL ---
         -- SECTION 1: GPU & RENDERER STATUS
@@ -274,7 +278,7 @@ icon:#("NC_Render", 1)
                 local w = (parts[1] as integer) as float
                 local h = (parts[2] as integer) as float
                 spnRatio.value = w / h
-                spnHeight.value = int((spnWidth.value as float) / spnRatio.value + 0.5)
+                if ckbLock.checked do spnHeight.value = int((spnWidth.value as float) / spnRatio.value + 0.5)
             )
         )
         -- SECTION 3: RENDER METHOD SELECTION
@@ -284,46 +288,38 @@ icon:#("NC_Render", 1)
         button btnDefaults "Default" pos:[340, 274] width:60 height:21
         
         groupBox grpApi " API Configuration " pos:[16, 304] width:384 height:54 visible:false
-        dropdownList ddlApiProvider "" pos:[24, 324] width:96 height:5 items:#("openrouter", "gemini") visible:false
-        editText txtApiKey "" pos:[124, 324] width:150 height:18 visible:false passwordChar:"*" text:""
-        editText txtApiModel "" pos:[278, 324] width:114 height:18 visible:false
-        button btnSaveApiCfg "💾 Save" pos:[16, 304] width:60 height:24 visible:false
-        
-        on ddlRenderMethod selected idx do
+        dropdownList ddlApiProvider "" pos:[24, 324] width:80 height:5 items:#("openrouter", "gemini") visible:false
+        editText txtApiKey "" pos:[108, 324] width:110 height:18 visible:false passwordChar:"*" text:""
+        editText txtApiModel "" pos:[222, 324] width:110 height:18 visible:false
+        button btnSaveApiCfg "💾 Save" pos:[336, 322] width:56 height:22 visible:false
+        fn ncMethodFromIdx idx =
         (
             case idx of
             (
-                1: renderMethod = "Corona GPU"
-                2: renderMethod = "V-Ray GPU"
-                3: renderMethod = "Local SD (CUDA)"
-                4: renderMethod = "OpenRouter API"
-                5: renderMethod = "Gemini API"
+                1: "Corona GPU"
+                2: "V-Ray GPU"
+                3: "Local SD (CUDA)"
+                4: "OpenRouter API"
+                5: "Gemini API"
             )
-            lblStatus.text = "Render method: " + renderMethod
+        )
+        
+        on ddlRenderMethod selected idx do
+        (
+            if idx == 1 and coronaInstalled != "true" then ( lblStatus.text = "Corona khong duoc cai dat — chuyen Local SD"; ddlRenderMethod.selection = 3 )
+            else if idx == 2 and vrayInstalled != "true" then ( lblStatus.text = "V-Ray khong duoc cai dat — chuyen Local SD"; ddlRenderMethod.selection = 3 )
             updateUIForMethod()
             if saveNcConfig != undefined do saveNcConfig()
         )
         
         on btnDefaults pressed do
         (
-            if coronaInstalled == "true" then
-            (
-                renderMethod = "Corona GPU"
-                ddlRenderMethod.selection = 1
-            )
-            else if vrayInstalled == "true" then
-            (
-                renderMethod = "V-Ray GPU"
-                ddlRenderMethod.selection = 2
-            )
-            else
-            (
-                renderMethod = "OpenRouter API"
-                ddlRenderMethod.selection = 4
-                updateUIForMethod()
-            )
-            lblStatus.text = "Render method: " + renderMethod
+            local targetIdx = 4
+            if coronaInstalled == "true" then targetIdx = 1
+            else if vrayInstalled == "true" then targetIdx = 2
+            ddlRenderMethod.selection = targetIdx
             updateUIForMethod()
+            lblStatus.text = "Mac dinh: " + renderMethod
             if saveNcConfig != undefined do saveNcConfig()
         )
         
@@ -474,6 +470,16 @@ icon:#("NC_Render", 1)
         -- SECTION 7: STATUS
         label lblStatus "Trạng thái: Sẵn sàng." pos:[8, 736] width:1096 height:18 style_sunkenedge:true
         -- ==== fn dat SAU widget (scope MaxScript) va theo dependency ==== 
+        fn ncRendererPresent clsPattern =
+        (
+            local hit = for rr in RendererClass.classes where matchPattern (rr as string) pattern:clsPattern collect rr
+            hit.count > 0
+        )
+        fn ncSetRenderer clsPattern =
+        (
+            local hit = for rr in RendererClass.classes where matchPattern (rr as string) pattern:clsPattern collect rr
+            if hit.count > 0 then (renderers.current = hit[1](); true) else false
+        )
         fn getRenderCamera =
         (
             local idx = ddlCams.selection
@@ -684,17 +690,25 @@ icon:#("NC_Render", 1)
             global renderHeight = spnHeight.value as integer
             lblStatus.text = ("Kích thước: " + (renderWidth as string) + " x " + (renderHeight as string))
         )
+        fn syncApiWidgets =
+        (
+            if ddlApiProvider != undefined do
+            (
+                txtApiKey.text = (if apiKey == undefined then "" else apiKey as string)
+                txtApiModel.text = (if apiModel == undefined then "" else apiModel as string)
+                ddlApiProvider.selection = (if apiProvider == "gemini" then 2 else 1)
+            )
+        )
         fn updateUIForMethod =
         (
+        -- Single source of truth: selection
+            local selIdx = ddlRenderMethod.selection
+            if selIdx != undefined and selIdx >= 1 and selIdx <= 5 do
+                renderMethod = ncMethodFromIdx selIdx
         -- Enable/disable controls based on render method
             local isRenderEngine = (renderMethod == "Corona GPU" or renderMethod == "V-Ray GPU")
             local isAIConcept = (renderMethod == "Local SD (CUDA)" or renderMethod == "OpenRouter API" or renderMethod == "Gemini API")
-            
-            spnWidth.enabled = isRenderEngine
-            spnHeight.enabled = isRenderEngine
-            spnRatio.enabled = isRenderEngine
-            ckbLock.enabled = isRenderEngine
-            
+            syncApiWidgets()
             if grpApi != undefined do
             (
                 local isApi = (renderMethod == "OpenRouter API" or renderMethod == "Gemini API")
@@ -840,8 +854,12 @@ icon:#("NC_Render", 1)
                         renderOutputHeight = h
                         renderOutputResolution = [w, h]
                         
-                        renderers.current = renderers.Corona
-                        
+                        if (ncSetRenderer "*Corona*") == false then (
+                            lblStatus.text = "Corona khong duoc cai dat — chuyen qua che do khac"
+                            ddlRenderMethod.selection = 3
+                            renderMethod = "Local SD (CUDA)"
+                            updateUIForMethod()
+                        ) else (
                         lblStatus.text = "Đang render (Corona GPU)..."
                         local startTime = timeStamp()
                         local img = render()
@@ -857,6 +875,7 @@ icon:#("NC_Render", 1)
                             close img
                         )
                         else lblStatus.text = "Render thất bại! Kiểm tra Corona cài chưa?"
+                        )
                     )
                     catch (lblStatus.text = "Lỗi render: " + (getCurrentException() as string))
                 )
@@ -871,8 +890,12 @@ icon:#("NC_Render", 1)
                         renderOutputWidth = w
                         renderOutputHeight = h
                         
-                        renderers.current = renderers.VRay
-                        
+                        if (ncSetRenderer "*Ray*") == false then (
+                            lblStatus.text = "V-Ray khong duoc cai dat — chuyen qua che do khac"
+                            ddlRenderMethod.selection = 3
+                            renderMethod = "Local SD (CUDA)"
+                            updateUIForMethod()
+                        ) else (
                         lblStatus.text = "Đang render (V-Ray GPU)..."
                         local startTime = timeStamp()
                         local img = render()
@@ -888,6 +911,7 @@ icon:#("NC_Render", 1)
                             close img
                         )
                         else lblStatus.text = "Render thất bại! Kiểm tra V-Ray cài chưa?"
+                        )
                     )
                     catch (lblStatus.text = "Lỗi render: " + (getCurrentException() as string))
                 )
@@ -982,11 +1006,17 @@ icon:#("NC_Render", 1)
                         if (getCommand CoronaRenderer "coronaStartInteractiveRender") != undefined then coronaStartInteractiveRender()
                         else
                         (
+                            if (ncSetRenderer "*Corona*") == false then (
+                                lblStatus.text = "Corona khong duoc cai dat — chuyen qua che do khac"
+                                ddlRenderMethod.selection = 3
+                                renderMethod = "Local SD (CUDA)"
+                                updateUIForMethod()
+                            ) else (
                             renderOutputWidth = int(spnWidth.value * 0.5)
                             renderOutputHeight = int(spnHeight.value * 0.5)
-                            renderers.current = renderers.Corona
                             local img = render()
                             if img != undefined do (uiPreview.bitmap = img; lblStatus.text = "Corona Interactive preview")
+                            )
                         )
                     ) catch (lblStatus.text = "Corona IR không khả dụng")
                 )
@@ -997,11 +1027,17 @@ icon:#("NC_Render", 1)
                         if (getCommand VRayRenderer "vrayStartInteractiveRender") != undefined then vrayStartInteractiveRender()
                         else
                         (
+                            if (ncSetRenderer "*Ray*") == false then (
+                                lblStatus.text = "V-Ray khong duoc cai dat — chuyen qua che do khac"
+                                ddlRenderMethod.selection = 3
+                                renderMethod = "Local SD (CUDA)"
+                                updateUIForMethod()
+                            ) else (
                             renderOutputWidth = int(spnWidth.value * 0.5)
                             renderOutputHeight = int(spnHeight.value * 0.5)
-                            renderers.current = renderers.VRay
                             local img = render()
                             if img != undefined do (uiPreview.bitmap = img; lblStatus.text = "V-Ray Interactive preview")
+                            )
                         )
                     ) catch (lblStatus.text = "V-Ray Interactive không khả dụng")
                 )
@@ -1060,7 +1096,12 @@ icon:#("NC_Render", 1)
                         renderOutputWidth = w
                         renderOutputHeight = h
                         renderOutputResolution = [w, h]
-                        renderers.current = renderers.Corona
+                        if (ncSetRenderer "*Corona*") == false then (
+                            lblStatus.text = "Corona khong duoc cai dat — chuyen qua che do khac"
+                            ddlRenderMethod.selection = 3
+                            renderMethod = "Local SD (CUDA)"
+                            updateUIForMethod()
+                        ) else (
                         
                         lblStatus.text = "Đang render toàn cảnh..."
                         local startTime = timeStamp()
@@ -1079,6 +1120,7 @@ icon:#("NC_Render", 1)
                                 close img
                             )
                         ) else lblStatus.text = "Render thất bại"
+                        )
                     ) catch (lblStatus.text = "Lỗi: " + (getCurrentException() as string))
                 )
                 "V-Ray GPU":
@@ -1089,7 +1131,12 @@ icon:#("NC_Render", 1)
                         local h = spnHeight.value
                         renderOutputWidth = w
                         renderOutputHeight = h
-                        renderers.current = renderers.VRay
+                        if (ncSetRenderer "*Ray*") == false then (
+                            lblStatus.text = "V-Ray khong duoc cai dat — chuyen qua che do khac"
+                            ddlRenderMethod.selection = 3
+                            renderMethod = "Local SD (CUDA)"
+                            updateUIForMethod()
+                        ) else (
                         local img = render()
                         
                         if img != undefined then
@@ -1103,6 +1150,7 @@ icon:#("NC_Render", 1)
                                 save img
                                 close img
                             )
+                        )
                         )
                     ) catch (lblStatus.text = "Lỗi: " + (getCurrentException() as string))
                 )
@@ -1151,6 +1199,9 @@ icon:#("NC_Render", 1)
             local ocStep = "init"
             try
             (
+                ocStep = "detectRenderers"
+                global coronaInstalled = (if ncRendererPresent "*Corona*" then "true" else "false")
+                global vrayInstalled = (if ncRendererPresent "*Ray*" then "true" else "false")
                 ocStep = "syncCreate"
                 chkCorona.checked = (coronaInstalled == "true")
                 chkCorona.enabled = (coronaInstalled == "true" or hasCUDA == "true")
@@ -1167,6 +1218,8 @@ icon:#("NC_Render", 1)
                 ddlApiProvider.selection = (if apiProvider == "gemini" then 2 else 1)
                 ocStep = "spnRatio"
                 spnRatio.value = ((if renderWidth == undefined then 1920 else renderWidth) as float) / ((if renderHeight == undefined then 1080 else renderHeight) as float)
+                ocStep = "syncDdlFromConfig"
+                ddlRenderMethod.selection = (if renderMethod == "Corona GPU" then 1 else (if renderMethod == "V-Ray GPU" then 2 else (if renderMethod == "Local SD (CUDA)" then 3 else (if renderMethod == "Gemini API" then 5 else 4))))
                 ocStep = "scanMaterialsInScene"
                 scanMaterialsInScene()
                 ocStep = "updateUIForMethod"

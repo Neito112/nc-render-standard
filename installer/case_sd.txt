@@ -1,0 +1,6 @@
+START
+B1_RUN: true
+B2_CLASS: RolloutClass
+B2_CREATE: OK
+B3_STATE: method=Gemini API sel=5 grp=true key=true prov=true model=true save=true spnW=true keyTxt=sk-or-GG modelTxt=model-gg
+B9_DONE

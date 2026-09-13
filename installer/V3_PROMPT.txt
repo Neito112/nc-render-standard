@@ -1,0 +1,16 @@
+PROJECT ROOT = D:/Program/setup 3dsmax/Plugins/NC_Render_Standard (use fully-absolute paths for every read/edit; ignore Temp/mzptmp folders).
+
+Read the file D:/Program/setup 3dsmax/Plugins/NC_Render_Standard/installer/SPEC_V3.md IN FULL and implement it completely: fix the 3 bugs in usermacros/NC_Render_Bridge_v1.mcr per SPEC BUG1/BUG2/BUG3, keeping every ARCHITECTURE RULE listed there.
+
+Then build the harness installer/test_v3.ms exactly per SPEC TEST HARNESS section and drive it with 3dsmaxbatch ("C:/Program Files/Autodesk/3ds Max 2024/3dsmaxbatch.exe" with absolute script path) until ALL T3 assertions PASS in installer/test_v3_result.txt.
+
+Then run SPEC PIPELINE AFTER GREEN: parencheck, build_mzp.py, deploy the mcr extracted from the freshly built .mzp (CRLF->LF) to C:/Users/HOMIE/AppData/Local/Autodesk/3dsMax/2024 - 64bit/ENU/usermacros/NC_Render AI-NCRenderSmartBridge_v1.mcr, re-run installer/probe_open2.ms via 3dsmaxbatch -listenerlog (log is UTF-16) and it must stay clean (P2_RUN: OK, P2_CLASS: RolloutClass, P2_CREATE: undefined-ok, no OPEN_FAIL line).
+
+MAINTAINER HINTS:
+- BUG3a (API row not showing): suspect widget overlap — btnAPI Save sits at the SAME position as its groupBox title area. Put the 4 API widgets on one clean row inside the group with no overlap; prove visibility with real child-HWND enumeration (windows.getChildDlgControllers or dotnet), not just .visible property readback.
+- For setting rollout state from batch you can do: dlg = (the open dialog window); set rltNCRenderPro_v1.ddlRenderMethod.selection = 4 — but the handler needs the DIALOG open; open it in the test via createDialog rltNCRenderPro_v1 directly after macros.load/fileIn.
+- Corona/V-Ray renderer class names: PRINT the classOf of each item in the global `renderers` map to the result file first, then choose matchPattern strings from that ground truth.
+- If pressButton/doPress missing, drive handler logic by setting .selection properties on the controls.
+- Keep file UTF-8 no BOM, LF, `--` comments only, one widget per line.
+
+When everything is GREEN, print the SPEC DELIVERABLE section: candidate chosen for API row + diffs, renderer class names evidence, full test_v3_result.txt content, probe P2 lines, list of changed hunks. Iterate; do not stop early; do not ask questions.

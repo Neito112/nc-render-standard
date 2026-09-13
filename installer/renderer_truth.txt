@@ -1,0 +1,34 @@
+A renderers.count=EXC:-- Unknown property: "count" in #Struct:renderers(
+  GetDraftRenderer:<fn>; Public,
+  medit:<systemGlobal>; Public,
+  target:<systemGlobal>; Public,
+  current:<systemGlobal>; Public,
+  activeShade:<systemGlobal>; Public,
+  medit_locked:<systemGlobal>; Public,
+  renderDialogMode:<systemGlobal>; Public,
+  production:<systemGlobal>; Public,
+  renderButtonText:<systemGlobal>; Public,
+  ClearDraftRenderer:<fn>; Public)
+B renderers[5]=EXC:-- No ""get"" function for #Struct:renderers(
+  GetDraftRenderer:<fn>; Public,
+  medit:<systemGlobal>; Public,
+  target:<systemGlobal>; Public,
+  current:<systemGlobal>; Public,
+  activeShade:<systemGlobal>; Public,
+  medit_locked:<systemGlobal>; Public,
+  renderDialogMode:<systemGlobal>; Public,
+  production:<systemGlobal>; Public,
+  renderButtonText:<systemGlobal>; Public,
+  ClearDraftRenderer:<fn>; Public)
+C iter for r in renderers: EXC:-- No "map" function for #Struct:renderers(
+  GetDraftRenderer:<fn>; Public,
+  medit:<systemGlobal>; Public,
+  target:<systemGlobal>; Public,
+  current:<systemGlobal>; Public,
+  activeShade:<systemGlobal>; Public,
+  medit_locked:<systemGlobal>; Public,
+  renderDialogMode:<systemGlobal>; Public,
+  production:<systemGlobal>; Public,
+  renderButtonText:<systemGlobal>; Public,
+  ClearDraftRenderer:<fn>; Public)
+D RendererClass.classes: #(Default_Scanline_Renderer, VUE_File_Renderer, Quicksilver_Hardware_Renderer, A360_Cloud_Rendering, Corona, V_Ray_GPU_6__update_2_1, V_Ray_6__update_2_1, ART_Renderer, Arnold, Missing_Renderer)
