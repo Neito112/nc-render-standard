@@ -1,95 +1,294 @@
--- NC_Render_Bridge_v1.mcr — NC-Render AI Studio
---
--- CUDA render test, API key, material detection đa renderer,
--- camera consistency, upscale, reference image
---
--- Cài đặt trực tiếp vào userMacros directory
--- Paths relative to MZP package extraction
-macroScript NCRenderSmartBridge_v1
-category:"NC-Render AI"
-tooltip:"NC-Render AI Studio v1.4 — CUDA + API + Multi-Renderer"
-buttonText:"NC-Render v1"
-icon:#("NC_Render", 1)
-(
-    global rltNCRenderPro_v1
-    -- Helper tu viet, thay ham ma da duoc 3dsmaxbatch kiem chung:
-    --   trim / trimString : KHONG ton tai trong MaxScript
-    --   "abc".startsWith() / .contains() : kieu JS, KHONG ton tai
-    global ncTrim
-    global ncStartsWith
-    global ncContains
-    global ncHas
-    fn ncTrim s =
-    (
-        local t = s as string
-        while t.count > 0 and (t[1] == " " or t[1] == "\t") do t = substring t 2 -1
-        while t.count > 0 and (t[t.count] == " " or t[t.count] == "\t") do t = substring t 1 (t.count - 1)
-        t
-    )
-    fn ncStartsWith s pre =
-    (
-        local a = s as string
-        local b = pre as string
-        if a.count < b.count then false else ((substring a 1 b.count) == b)
-    )
-    fn ncContains s sub =
-    (
-        (findString (s as string) (sub as string)) != undefined
-    )
-    fn ncHas s sub =
-    (
-        (findString (s as string) (sub as string)) != undefined
-    )
-    try (destroyDialog rltNCRenderPro_v1) catch()
-        -- ============================================================
-        -- CONFIG — loaded from config file if exists
-        -- ============================================================
-    global configFile = (getDir #temp) + "/nc_render_config.txt"
-    local config = #()
-    if doesFileExist configFile then
-    (
-        local f = openFile configFile
-        while not eof f do append config (ncTrim (readLine f))
-        close f
-    )
-    
-    global renderMethod = if config.count > 0 then config[1] else "Corona GPU"
-    global apiProvider = if config.count > 1 then config[2] else "openrouter"
-    global apiKey = if config.count > 2 then config[3] else ""
-    global apiModel = if config.count > 3 then config[4] else "google/gemini-2.5-flash-image-preview"
-    global gpuName = if config.count > 4 then config[5] else "Unknown"
-    global gpuMemory = if config.count > 5 then config[6] else "0"
-    global hasCUDA = if config.count > 6 then config[7] else "false"
-    global coronaInstalled = if config.count > 7 then config[8] else "false"
-    global vrayInstalled = if config.count > 8 then config[9] else "false"
-    global pytorchCUDA = if config.count > 9 then config[10] else "false"
-    global renderWidth = 1920
-    global renderHeight = 1080
-        -- Python interpreter có CUDA — trỏ tới venv Hermes Agent
-    global pythonBin = "C:/Users/HOMIE/AppData/Local/hermes/hermes-agent/venv/Scripts/python.exe"
-    -- Duong dan project goc (giu toan bo payload trong thu muc du an)
-    global ncPluginRoot = @"D:/Program/setup 3dsmax/Plugins/NC_Render_Standard"
-    global ncScriptsDir = ncPluginRoot + "/scripts/"
-        -- ============================================================
-        -- UI — Main rollout
-        -- ============================================================
-    global ncReferenceImage = undefined
-    rollout rltNCRenderPro_v1 "NC-Render AI Studio v1.0 — CUDA + API + Multi-Renderer" width:1120 height:760
+global renderMethod = "OpenRouter API"
+global apiKey = "sk-or-...test"
+global apiModel = "some/model"
+global apiProvider = "openrouter"
+global gpuName = "test"
+global gpuMemory = "0"
+global hasCUDA = "false"
+global coronaInstalled = "true"
+global vrayInstalled = "false"
+global pytorchCUDA = "true"
+global renderWidth = 1920
+global renderHeight = 1080
+global pythonBin = "C:/x/python.exe"
+global ncScriptsDir = "C:/x/"
+global ncPluginRoot = "C:/x"
+fn ncTrim s = s
+fn ncHas a b = (findString (a as string) (b as string)) != undefined
+fn ncStartsWith a b = true
+fn ncContains a b = true
+    rollout MyRltTest "NC-Render AI Studio v1.0 — CUDA + API + Multi-Renderer" width:1120 height:760
     (
         -- Gan text dong sau khi tao widget (rollout clause can string literal)
 
+        -- ===== HELPERS hoisted TRUOC handler dau tien: fn phai duoc dinh nghia
         --        truoc khi on open/pressed chay (clause order = execution order) =====
 
+        fn updateUIForMethod =
+        (
+        -- Enable/disable controls based on render method
+            local isRenderEngine = (renderMethod == "Corona GPU" or renderMethod == "V-Ray GPU")
+            local isAIConcept = (renderMethod == "Local SD (CUDA)" or renderMethod == "OpenRouter API" or renderMethod == "Gemini API")
+            
+            spnWidth.enabled = isRenderEngine
+            spnHeight.enabled = isRenderEngine
+            spnRatio.enabled = isRenderEngine
+            ckbLock.enabled = isRenderEngine
+            
+            if grpApi != undefined do
+            (
+                local isApi = (renderMethod == "OpenRouter API" or renderMethod == "Gemini API")
+                grpApi.visible = isApi
+                ddlApiProvider.visible = isApi
+                txtApiKey.visible = isApi
+                txtApiModel.visible = isApi
+                btnSaveApiCfg.visible = isApi
+            )
+        -- Update button texts
+            btnRender1.text = case true of
+            (
+                (renderMethod == "Corona GPU"): "⚡ Render Test (Corona GPU)"
+                (renderMethod == "V-Ray GPU"): "⚡ Render Test (V-Ray GPU)"
+                (renderMethod == "Local SD (CUDA)"): "⚡ Generate from Prompt (CUDA)"
+                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "⚡ Generate via API"
+            )
+            btnRender2.text = case true of
+            (
+                (renderMethod == "Corona GPU"): "🔄 Corona Interactive"
+                (renderMethod == "V-Ray GPU"): "🔄 V-Ray Interactive"
+                (renderMethod == "Local SD (CUDA)"): "🔄 Generate + Upscale"
+                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "🔄 Generate with Reference"
+            )
+            btnRender3.text = case true of
+            (
+                (renderMethod == "Corona GPU"): "🚀 Full Render (Corona)"
+                (renderMethod == "V-Ray GPU"): "🚀 Full Render (V-Ray)"
+                (renderMethod == "Local SD (CUDA)"): "🚀 Batch Generate"
+                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "🚀 Upscale Result"
+            )
+            
+            lblStatus.text = "Render method: " + renderMethod
+        )
 
+        fn scanMaterialsInScene =
+        (
+            local allMats = #()
+        -- Detect Corona materials
+            try
+            (
+                for m in getClassInstances CoronaMaterial where isValidNode m do
+                (
+                    local info = #("Corona", m.name, m)
+                    append allMats info
+                )
+            ) catch ()
+        -- Detect V-Ray materials
+            try
+            (
+                for m in getClassInstances VRayMtl where isValidNode m do
+                (
+                    local info = #("V-Ray", m.name, m)
+                    append allMats info
+                )
+            ) catch ()
+        -- Detect standard materials
+            for m in objects where isValidNode m and classOf m == Material do
+            (
+                local className = classOf(m) as string
+                if className == "Standard" or className == "PhysicalMaterial" or className == "Multimaterial" then
+                (
+                    local info = #(className, m.name, m)
+                    append allMats info
+                )
+            )
+            
+            return allMats
+        )
 
+        fn getRenderCamera =
+        (
+            local idx = ddlCams.selection
+            if idx > 1 then
+            (
+                local camName = ddlCams.items[idx]
+                if camName != "[Active Viewport]" then
+                (
+                    for c in cameras where c.name == camName do return c
+                )
+            )
+            return undefined
+        )
 
+        fn captureViewportRender =
+        (
+            local cam = getRenderCamera()
+            if cam != undefined do viewport.setCamera cam
+            
+            local savedHidden = for o in objects where o.isHidden collect o
+            local savedSafeFrames = displaySafeFrames
+            
+            try
+            (
+                clearSelection()
+                unhide objects
+                displaySafeFrames = false
+                hideByCategory.helpers = true
+                hideByCategory.lights = true
+                hideByCategory.cameras = true
+                hideByCategory.shapes = true
+                
+                viewport.setRenderLevel #smoothhighlights
+                completeRedraw()
+                redrawViews()
+                
+                local bmp = gw.getViewportDib()
+                return bmp
+            )
+            catch (return undefined)
+            finally
+            (
+                displaySafeFrames = savedSafeFrames
+                for o in savedHidden where isValidNode o do o.isHidden = true
+                completeRedraw()
+                redrawViews()
+            )
+        )
 
+        fn applyResToMax =
+        (
+            global renderWidth = spnWidth.value as integer
+            global renderHeight = spnHeight.value as integer
+            lblStatus.text = ("Kích thước: " + (renderWidth as string) + " x " + (renderHeight as string))
+        )
 
+        fn refreshPreviewDisplay =
+        (
+            local raw = captureGhostViewport passType:#rgb
+            if raw != undefined then
+            (
+                uiPreview.bitmap = raw
+                lblStatus.text = "Đã cập nhật khung nhìn"
+            )
+        )
 
+        fn refreshCamList =
+        (
+            local camNames = #("[Active Viewport]")
+            for c in cameras where classOf c != Targetobject do append camNames c.name
+            ddlCams.items = camNames
+            ddlCams.selection = 1
+            lblStatus.text = "Đã quét lại cameras"
+        )
 
+        fn captureGhostViewport passType:#rgb =
+        (
+            local capturedBmp = undefined
+            local camNode = getRenderCamera()
+            local savedHidden = for o in objects where o.isHidden collect o
+            local oldSafeFrames = displaySafeFrames
+            local oldSel = selection as array
+            local oldViewCube = false
+            
+            local oldHideShapes = hideByCategory.shapes
+            local oldHideHelpers = hideByCategory.helpers
+            local oldHideLights = hideByCategory.lights
+            local oldHideCameras = hideByCategory.cameras
+            
+            try
+            (
+                clearSelection()
+                try (oldViewCube = viewcube.visible; viewcube.visible = false) catch ()
+                unhide objects
+                if isValidNode camNode and camNode != undefined do viewport.setCamera camNode
+                displaySafeFrames = false
+                
+                hideByCategory.helpers = true
+                hideByCategory.lights = true
+                hideByCategory.cameras = true
+                hideByCategory.shapes = true
+                
+                case passType of
+                (
+                    #rgb: (viewport.setRenderLevel #smoothhighlights; viewport.SetShowEdgeFaces false)
+                    #edged: (viewport.setRenderLevel #smoothhighlights; viewport.SetShowEdgeFaces true)
+                    #wire: (viewport.setRenderLevel #wireFrame; viewport.SetShowEdgeFaces false)
+                )
+                
+                completeRedraw()
+                redrawViews()
+                capturedBmp = gw.getViewportDib()
+            ) catch ()
+            
+            hideByCategory.shapes = oldHideShapes
+            hideByCategory.helpers = oldHideHelpers
+            hideByCategory.lights = oldHideLights
+            hideByCategory.cameras = oldHideCameras
+            viewport.setRenderLevel #smoothhighlights
+            viewport.SetShowEdgeFaces false
+            try (viewcube.visible = oldViewCube) catch ()
+            displaySafeFrames = oldSafeFrames
+            for o in savedHidden where isValidNode o do o.isHidden = true
+            select oldSel
+            completeRedraw()
+            redrawViews()
+            
+            return capturedBmp
+        )
 
+        fn buildScenePrompt =
+        (
+            local sceneDesc = ""
+        -- Count objects in scene
+            local objCount = 0
+            for o in geometry where not o.isHidden do objCount += 1
+            
+            if objCount > 0 then
+            (
+                sceneDesc += (objCount as string) + " objects in scene"
+            )
+        -- Detect materials
+            local matInfo = scanMaterialsInScene()
+            if matInfo.count > 0 then
+            (
+                local coronaCount = 0
+                local vrayCount = 0
+                local stdCount = 0
+                
+                for m in matInfo do
+                (
+                    case m[1] of
+                    (
+                        "Corona": coronaCount += 1
+                        "V-Ray": vrayCount += 1
+                        default: stdCount += 1
+                    )
+                )
+                
+                sceneDesc += " | Materials: " + (coronaCount as string) + " Corona, " + (vrayCount as string) + " V-Ray, " + (stdCount as string) + " Standard"
+            )
+        -- Camera info
+            local cam = getRenderCamera()
+            if cam != undefined then
+            (
+                local fov = if isValidNode cam then cam.fov else 63.0
+                local focal = 18.0 / (tan (fov / 2.0))
+                sceneDesc += " | Camera: " + (focal as string) + "mm lens"
+            )
+            
+            return sceneDesc
+        )
 
-        on rltNCRenderPro_v1 create do
+        fn arrayToCSV arr =
+        (
+            local result = ""
+            for i = 1 to arr.count do
+            (
+                result += arr[i]
+                if i < arr.count do result += "|||"
+            )
+            return result
+        )
+        on MyRltTest create do
         (
             lblGPUInfo.text = "GPU: " + gpuName
             lblGPUMemory.text = "VRAM: " + gpuMemory + " MB"
@@ -103,8 +302,10 @@ icon:#("NC_Render", 1)
         label lblGPUMemory "VRAM: -" pos:[16, 40] width:180
         label lblCUDAStatus "CUDA: -" pos:[16, 56] width:180
         
-        checkbox chkCorona "Corona" pos:[16, 72] width:80 height:18 checked:false
-        checkbox chkVray "V-Ray" pos:[100, 72] width:80 height:18 checked:false
+        local isCorona = coronaInstalled == "true"
+        local isVray = vrayInstalled == "true"
+        checkbox chkCorona "Corona" pos:[16, 72] width:80 height:18 checked:isCorona enabled:(isCorona or hasCUDA == "true")
+        checkbox chkVray "V-Ray" pos:[100, 72] width:80 height:18 checked:isVray enabled:(isVray or hasCUDA == "true")
         -- SECTION UPDATE: Kiểm tra cập nhật plugin
         groupBox grpUpdate " Plugin Update " pos:[212, 8] width:196 height:96
         label lblUpdateInfo "Phiên bản hiện tại: v1.0.0" pos:[220, 24] width:180
@@ -259,9 +460,9 @@ icon:#("NC_Render", 1)
             lblStatus.text = "Da reset ve viewport hien tai"
         )
         
-        spinner spnWidth "W" range:[64, 7680, 1920] type:#integer fieldwidth:40 pos:[16, 184]
-        spinner spnHeight "H" range:[64, 7680, 1080] type:#integer fieldwidth:40 pos:[120, 184]
-        spinner spnRatio "R" range:[0.1, 10.0, 1.778] type:#float scale:0.001 fieldwidth:36 pos:[220, 184]
+        spinner spnWidth "W" range:[64, 7680, 1920] type:#integer fieldwidth:40 pos:[16, 184] enabled:(renderMethod == "Corona GPU" or renderMethod == "V-Ray GPU")
+        spinner spnHeight "H" range:[64, 7680, 1080] type:#integer fieldwidth:40 pos:[120, 184] enabled:(renderMethod == "Corona GPU" or renderMethod == "V-Ray GPU")
+        spinner spnRatio "R" range:[0.1, 10.0, 1.778] type:#float scale:0.001 fieldwidth:36 pos:[220, 184] enabled:(renderMethod == "Corona GPU" or renderMethod == "V-Ray GPU")
         checkbutton ckbLock "🔒 L" checked:true width:24 height:20 pos:[308, 182] tooltip:"Khóa tỉ lệ khung hình"
         dropdownList ddlRatio "" pos:[336, 182] width:64 height:5 items:#("16:9", "4:3", "5:4", "3:2", "2:1", "1:1", "9:16")
         
@@ -285,7 +486,7 @@ icon:#("NC_Render", 1)
         
         groupBox grpApi " API Configuration " pos:[16, 304] width:384 height:54 visible:false
         dropdownList ddlApiProvider "" pos:[24, 324] width:96 height:5 items:#("openrouter", "gemini") visible:false
-        editText txtApiKey "" pos:[124, 324] width:150 height:18 visible:false passwordChar:"*" text:""
+        editText txtApiKey "" pos:[124, 324] width:150 height:18 visible:false passwordChar:"*" text:apiKey
         editText txtApiModel "" pos:[278, 324] width:114 height:18 visible:false
         button btnSaveApiCfg "💾 Save" pos:[16, 304] width:60 height:24 visible:false
         
@@ -306,12 +507,12 @@ icon:#("NC_Render", 1)
         
         on btnDefaults pressed do
         (
-            if coronaInstalled == "true" then
+            if isCorona then
             (
                 renderMethod = "Corona GPU"
                 ddlRenderMethod.selection = 1
             )
-            else if vrayInstalled == "true" then
+            else if isVray then
             (
                 renderMethod = "V-Ray GPU"
                 ddlRenderMethod.selection = 2
@@ -451,284 +652,33 @@ icon:#("NC_Render", 1)
         label lblReference "Reference (tham chiếu):" pos:[424, 660] width:160 height:18
         button btnLoadRef "📁 Load ref" pos:[424, 680] width:100 height:24
         button btnClearRef "🗑 Clear" pos:[528, 680] width:100 height:24
+        local referenceImage = undefined
         
         on btnLoadRef pressed do
         (
             local fname = getOpenFileName caption:"Select reference image" types:"Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.tga|All Files|*.*|"
             if fname != undefined then
             (
-                ncReferenceImage = open fname
+                referenceImage = open fname
                 lblStatus.text = "Reference loaded: " + (filenameFromPath fname)
             )
         )
         
         on btnClearRef pressed do
         (
-            if ncReferenceImage != undefined then
+            if referenceImage != undefined then
             (
-                close ncReferenceImage
-                ncReferenceImage = undefined
+                close referenceImage
+                referenceImage = undefined
                 lblStatus.text = "Reference cleared"
             )
         )
         -- SECTION 7: STATUS
         label lblStatus "Trạng thái: Sẵn sàng." pos:[8, 736] width:1096 height:18 style_sunkenedge:true
-        -- ==== fn dat SAU widget (scope MaxScript) va theo dependency ==== 
-        fn getRenderCamera =
-        (
-            local idx = ddlCams.selection
-            if idx > 1 then
-            (
-                local camName = ddlCams.items[idx]
-                if camName != "[Active Viewport]" then
-                (
-                    for c in cameras where c.name == camName do return c
-                )
-            )
-            return undefined
-        )
-        fn captureViewportRender =
-        (
-            local cam = getRenderCamera()
-            if cam != undefined do viewport.setCamera cam
-            
-            local savedHidden = for o in objects where o.isHidden collect o
-            local savedSafeFrames = displaySafeFrames
-            
-            try
-            (
-                clearSelection()
-                unhide objects
-                displaySafeFrames = false
-                hideByCategory.helpers = true
-                hideByCategory.lights = true
-                hideByCategory.cameras = true
-                hideByCategory.shapes = true
-                
-                viewport.setRenderLevel #smoothhighlights
-                completeRedraw()
-                redrawViews()
-                
-                local bmp = gw.getViewportDib()
-                return bmp
-            )
-            catch (return undefined)
-            finally
-            (
-                displaySafeFrames = savedSafeFrames
-                for o in savedHidden where isValidNode o do o.isHidden = true
-                completeRedraw()
-                redrawViews()
-            )
-        )
-        fn captureGhostViewport passType:#rgb =
-        (
-            local capturedBmp = undefined
-            local camNode = getRenderCamera()
-            local savedHidden = for o in objects where o.isHidden collect o
-            local oldSafeFrames = displaySafeFrames
-            local oldSel = selection as array
-            local oldViewCube = false
-            
-            local oldHideShapes = hideByCategory.shapes
-            local oldHideHelpers = hideByCategory.helpers
-            local oldHideLights = hideByCategory.lights
-            local oldHideCameras = hideByCategory.cameras
-            
-            try
-            (
-                clearSelection()
-                try (oldViewCube = viewcube.visible; viewcube.visible = false) catch ()
-                unhide objects
-                if isValidNode camNode and camNode != undefined do viewport.setCamera camNode
-                displaySafeFrames = false
-                
-                hideByCategory.helpers = true
-                hideByCategory.lights = true
-                hideByCategory.cameras = true
-                hideByCategory.shapes = true
-                
-                case passType of
-                (
-                    #rgb: (viewport.setRenderLevel #smoothhighlights; viewport.SetShowEdgeFaces false)
-                    #edged: (viewport.setRenderLevel #smoothhighlights; viewport.SetShowEdgeFaces true)
-                    #wire: (viewport.setRenderLevel #wireFrame; viewport.SetShowEdgeFaces false)
-                )
-                
-                completeRedraw()
-                redrawViews()
-                capturedBmp = gw.getViewportDib()
-            ) catch ()
-            
-            hideByCategory.shapes = oldHideShapes
-            hideByCategory.helpers = oldHideHelpers
-            hideByCategory.lights = oldHideLights
-            hideByCategory.cameras = oldHideCameras
-            viewport.setRenderLevel #smoothhighlights
-            viewport.SetShowEdgeFaces false
-            try (viewcube.visible = oldViewCube) catch ()
-            displaySafeFrames = oldSafeFrames
-            for o in savedHidden where isValidNode o do o.isHidden = true
-            select oldSel
-            completeRedraw()
-            redrawViews()
-            
-            return capturedBmp
-        )
-        fn refreshCamList =
-        (
-            local camNames = #("[Active Viewport]")
-            for c in cameras where classOf c != Targetobject do append camNames c.name
-            ddlCams.items = camNames
-            ddlCams.selection = 1
-            lblStatus.text = "Đã quét lại cameras"
-        )
-        fn refreshPreviewDisplay =
-        (
-            local raw = captureGhostViewport passType:#rgb
-            if raw != undefined then
-            (
-                uiPreview.bitmap = raw
-                lblStatus.text = "Đã cập nhật khung nhìn"
-            )
-        )
-        fn scanMaterialsInScene =
-        (
-            local allMats = #()
-        -- Detect Corona materials
-            try
-            (
-                for m in getClassInstances CoronaMaterial where isValidNode m do
-                (
-                    local info = #("Corona", m.name, m)
-                    append allMats info
-                )
-            ) catch ()
-        -- Detect V-Ray materials
-            try
-            (
-                for m in getClassInstances VRayMtl where isValidNode m do
-                (
-                    local info = #("V-Ray", m.name, m)
-                    append allMats info
-                )
-            ) catch ()
-        -- Detect standard materials
-            for m in objects where isValidNode m and classOf m == Material do
-            (
-                local className = classOf(m) as string
-                if className == "Standard" or className == "PhysicalMaterial" or className == "Multimaterial" then
-                (
-                    local info = #(className, m.name, m)
-                    append allMats info
-                )
-            )
-            
-            return allMats
-        )
-        fn buildScenePrompt =
-        (
-            local sceneDesc = ""
-        -- Count objects in scene
-            local objCount = 0
-            for o in geometry where not o.isHidden do objCount += 1
-            
-            if objCount > 0 then
-            (
-                sceneDesc += (objCount as string) + " objects in scene"
-            )
-        -- Detect materials
-            local matInfo = scanMaterialsInScene()
-            if matInfo.count > 0 then
-            (
-                local coronaCount = 0
-                local vrayCount = 0
-                local stdCount = 0
-                
-                for m in matInfo do
-                (
-                    case m[1] of
-                    (
-                        "Corona": coronaCount += 1
-                        "V-Ray": vrayCount += 1
-                        default: stdCount += 1
-                    )
-                )
-                
-                sceneDesc += " | Materials: " + (coronaCount as string) + " Corona, " + (vrayCount as string) + " V-Ray, " + (stdCount as string) + " Standard"
-            )
-        -- Camera info
-            local cam = getRenderCamera()
-            if cam != undefined then
-            (
-                local fov = if isValidNode cam then cam.fov else 63.0
-                local focal = 18.0 / (tan (fov / 2.0))
-                sceneDesc += " | Camera: " + (focal as string) + "mm lens"
-            )
-            
-            return sceneDesc
-        )
-        fn arrayToCSV arr =
-        (
-            local result = ""
-            for i = 1 to arr.count do
-            (
-                result += arr[i]
-                if i < arr.count do result += "|||"
-            )
-            return result
-        )
-        fn applyResToMax =
-        (
-            global renderWidth = spnWidth.value as integer
-            global renderHeight = spnHeight.value as integer
-            lblStatus.text = ("Kích thước: " + (renderWidth as string) + " x " + (renderHeight as string))
-        )
-        fn updateUIForMethod =
-        (
-        -- Enable/disable controls based on render method
-            local isRenderEngine = (renderMethod == "Corona GPU" or renderMethod == "V-Ray GPU")
-            local isAIConcept = (renderMethod == "Local SD (CUDA)" or renderMethod == "OpenRouter API" or renderMethod == "Gemini API")
-            
-            spnWidth.enabled = isRenderEngine
-            spnHeight.enabled = isRenderEngine
-            spnRatio.enabled = isRenderEngine
-            ckbLock.enabled = isRenderEngine
-            
-            if grpApi != undefined do
-            (
-                local isApi = (renderMethod == "OpenRouter API" or renderMethod == "Gemini API")
-                grpApi.visible = isApi
-                ddlApiProvider.visible = isApi
-                txtApiKey.visible = isApi
-                txtApiModel.visible = isApi
-                btnSaveApiCfg.visible = isApi
-            )
-        -- Update button texts
-            btnRender1.text = case true of
-            (
-                (renderMethod == "Corona GPU"): "⚡ Render Test (Corona GPU)"
-                (renderMethod == "V-Ray GPU"): "⚡ Render Test (V-Ray GPU)"
-                (renderMethod == "Local SD (CUDA)"): "⚡ Generate from Prompt (CUDA)"
-                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "⚡ Generate via API"
-            )
-            btnRender2.text = case true of
-            (
-                (renderMethod == "Corona GPU"): "🔄 Corona Interactive"
-                (renderMethod == "V-Ray GPU"): "🔄 V-Ray Interactive"
-                (renderMethod == "Local SD (CUDA)"): "🔄 Generate + Upscale"
-                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "🔄 Generate with Reference"
-            )
-            btnRender3.text = case true of
-            (
-                (renderMethod == "Corona GPU"): "🚀 Full Render (Corona)"
-                (renderMethod == "V-Ray GPU"): "🚀 Full Render (V-Ray)"
-                (renderMethod == "Local SD (CUDA)"): "🚀 Batch Generate"
-                (renderMethod == "OpenRouter API" or renderMethod == "Gemini API"): "🚀 Upscale Result"
-            )
-            
-            lblStatus.text = "Render method: " + renderMethod
-        )
+        -- ============================================================
+        -- HELPER FUNCTIONS
+        -- ============================================================
+        
         fn saveNcConfig =
         (
             try
@@ -748,6 +698,7 @@ icon:#("NC_Render", 1)
                 close f
             ) catch()
         )
+
         fn ncJsonImage jPath =
         (
             -- Doc JSON 1 dong {.."image":"..."}, tra ve duong dan PNG hoac undefined
@@ -768,6 +719,7 @@ icon:#("NC_Render", 1)
                 )
             ) catch undefined
         )
+        
         fn ncRunPython cmdArgs outFile =
         (
             -- Sync python chay co timeout; xu ly het pipe TRUOC WaitForExit de tranh pipe deadlock.
@@ -812,13 +764,6 @@ icon:#("NC_Render", 1)
             local tail = if err.count > 300 then (substring err (err.count - 299) 300) else err
             return #(code, tail)
         )
-
-        -- ============================================================
-        -- HELPER FUNCTIONS
-        -- ============================================================
-        
-
-        
         -- ============================================================
         -- RENDER HANDLERS
         -- ============================================================
@@ -904,10 +849,10 @@ icon:#("NC_Render", 1)
                         local outFile = (getDir #temp) + "/nc_local_render.json"
                         local cmdArgs = ("\"" + pyScript + "\" --prompt \"" + finalPrompt + "\" --width " + (spnWidth.value as string) + " --height " + (spnHeight.value as string) + " --output-json \"" + outFile + "\"")
                         
-                        if ncReferenceImage != undefined then
+                        if referenceImage != undefined then
                         (
                             local refPath = (getDir #temp) + "/nc_reference.png"
-                            copy ncReferenceImage filename:refPath
+                            copy referenceImage filename:refPath
                             cmdArgs += " --reference \"" + refPath + "\""
                         )
                         
@@ -1016,10 +961,10 @@ icon:#("NC_Render", 1)
                         local cmdArgs = ("\"" + pyScript + "\" --prompt \"" + finalPrompt + "\" --width " + (spnWidth.value as string) + " --height " + (spnHeight.value as string) + " --upscale " + (ddlUpscale.selection as string) + " --output-json \"" + outFile + "\"")
                         
                         if chkDetail.checked do cmdArgs += " --detail"
-                        if ncReferenceImage != undefined then
+                        if referenceImage != undefined then
                         (
                             local refPath = (getDir #temp) + "/nc_reference.png"
-                            copy ncReferenceImage filename:refPath
+                            copy referenceImage filename:refPath
                             cmdArgs += " --reference \"" + refPath + "\""
                         )
                         local res = ncRunPython cmdArgs outFile
@@ -1122,10 +1067,10 @@ icon:#("NC_Render", 1)
                         local outFile = (getDir #temp) + "/nc_batch_out.json"
                         local cmdArgs = ("\"" + pyScript + "\" --prompts \"" + (arrayToCSV variations) + "\"")
                         
-                        if ncReferenceImage != undefined then
+                        if referenceImage != undefined then
                         (
                             local refPath = (getDir #temp) + "/nc_reference.png"
-                            copy ncReferenceImage filename:refPath
+                            copy referenceImage filename:refPath
                             cmdArgs += " --reference \"" + refPath + "\""
                         )
                         local res = ncRunPython cmdArgs outFile
@@ -1146,40 +1091,25 @@ icon:#("NC_Render", 1)
         -- UI EVENTS
         -- ============================================================
         
-        on rltNCRenderPro_v1 open do
+        on MyRltTest open do
         (
-            local ocStep = "init"
-            try
-            (
-                ocStep = "syncCreate"
-                chkCorona.checked = (coronaInstalled == "true")
-                chkCorona.enabled = (coronaInstalled == "true" or hasCUDA == "true")
-                chkVray.checked = (vrayInstalled == "true")
-                chkVray.enabled = (vrayInstalled == "true" or hasCUDA == "true")
-                ocStep = "refreshCamList"
-                refreshCamList()
-                ocStep = "spnWH"
-                spnWidth.value = (if renderWidth == undefined then 1920 else renderWidth)
-                spnHeight.value = (if renderHeight == undefined then 1080 else renderHeight)
-                ocStep = "apiWidgets"
-                txtApiKey.text = (if apiKey == undefined then "" else apiKey as string)
-                txtApiModel.text = (if apiModel == undefined then "" else apiModel as string)
-                ddlApiProvider.selection = (if apiProvider == "gemini" then 2 else 1)
-                ocStep = "spnRatio"
-                spnRatio.value = ((if renderWidth == undefined then 1920 else renderWidth) as float) / ((if renderHeight == undefined then 1080 else renderHeight) as float)
-                ocStep = "scanMaterialsInScene"
-                scanMaterialsInScene()
-                ocStep = "updateUIForMethod"
-                updateUIForMethod()
-                ocStep = "refreshPreviewDisplay"
-                refreshPreviewDisplay()
-                lblStatus.text = "Plugin v1.0 loaded. " + renderMethod + " | " + gpuName
-            )
-            catch
-            (
-                format "OPEN_FAIL step=% ex=%\n" ocStep (getCurrentException())
-                try ( lblStatus.text = "Open loi [" + ocStep + "]" ) catch()
-            )
+        -- Load cameras
+            refreshCamList()
+        -- Load last width/height (renderWidth/renderHeight do applyResToMax giu trong lan chay truoc)
+            spnWidth.value = (if renderWidth == undefined then 1920 else renderWidth)
+            spnHeight.value = (if renderHeight == undefined then 1080 else renderHeight)
+            txtApiKey.text = apiKey
+            txtApiModel.text = apiModel
+            ddlApiProvider.selection = (if apiProvider == "gemini" then 2 else 1)
+            spnRatio.value = (renderWidth as float) / (renderHeight as float)
+        -- Detect materials in scene
+            scanMaterialsInScene()
+        -- Update UI for current method
+            updateUIForMethod()
+        -- Capture initial preview
+            refreshPreviewDisplay()
+            
+            lblStatus.text = "Plugin v1.0 loaded. " + renderMethod + " | " + gpuName
         )
         
         on ddlCams selected idx do
@@ -1306,18 +1236,7 @@ icon:#("NC_Render", 1)
         -- ============================================================
     )
     
-    on execute do
-    (
-        try
-        (
-            if rltNCRenderPro_v1 == undefined then
-                throw "NC_Render rollout class missing (reload the .mcr)"
-            createDialog rltNCRenderPro_v1
-        )
-        catch
-        (
-            format "NC-Render dialog FAILED: %\n" (getCurrentException())
-            messageBox ("NC-Render AI cannot open: " + (getCurrentException() as string)) title:"NC-Render AI"
-        )
-    )
-)
+(local e = try ( createDialog MyRltTest ) catch ("EXC:" + (getCurrentException() as string)))
+(format "T_CREATE: %\n" (e as string))
+(try (destroyDialog MyRltTest) catch ())
+(format "T_DONE\n")
