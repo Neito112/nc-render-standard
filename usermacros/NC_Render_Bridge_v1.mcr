@@ -862,17 +862,17 @@ icon:#("NC_Render", 1)
                         ) else (
                         lblStatus.text = "Đang render (Corona GPU)..."
                         local startTime = timeStamp()
-                        local img = render()
+                        local bmp = bitmap w h
+                        local img = render to:bmp vfb:false outputSize:[w, h]
                         local elapsed = (timeStamp() - startTime) / 1000.0
                         
-                        if img != undefined then
+                        if bmp != undefined then
                         (
-                            uiPreview.bitmap = img
+                            uiPreview.bitmap = bmp
                             lblStatus.text = ("Render xong: " + (w as string) + "x" + (h as string) + " — " + (elapsed as string) + "s")
                             local savePath = (getDir #temp) + "/nc_render_test.png"
-                            img.filename = savePath
-                            save img
-                            close img
+                            bmp.filename = savePath
+                            save bmp
                         )
                         else lblStatus.text = "Render thất bại! Kiểm tra Corona cài chưa?"
                         )
@@ -898,17 +898,17 @@ icon:#("NC_Render", 1)
                         ) else (
                         lblStatus.text = "Đang render (V-Ray GPU)..."
                         local startTime = timeStamp()
-                        local img = render()
+                        local bmp = bitmap w h
+                        local img = render to:bmp vfb:false outputSize:[w, h]
                         local elapsed = (timeStamp() - startTime) / 1000.0
                         
-                        if img != undefined then
+                        if bmp != undefined then
                         (
-                            uiPreview.bitmap = img
+                            uiPreview.bitmap = bmp
                             lblStatus.text = ("Render xong: " + (w as string) + "x" + (h as string) + " — " + (elapsed as string) + "s")
                             local savePath = (getDir #temp) + "/nc_render_test.png"
-                            img.filename = savePath
-                            save img
-                            close img
+                            bmp.filename = savePath
+                            save bmp
                         )
                         else lblStatus.text = "Render thất bại! Kiểm tra V-Ray cài chưa?"
                         )
@@ -1012,10 +1012,13 @@ icon:#("NC_Render", 1)
                                 renderMethod = "Local SD (CUDA)"
                                 updateUIForMethod()
                             ) else (
-                            renderOutputWidth = int(spnWidth.value * 0.5)
-                            renderOutputHeight = int(spnHeight.value * 0.5)
-                            local img = render()
-                            if img != undefined do (uiPreview.bitmap = img; lblStatus.text = "Corona Interactive preview")
+                            local w = int(spnWidth.value * 0.5)
+                            local h = int(spnHeight.value * 0.5)
+                            renderOutputWidth = w
+                            renderOutputHeight = h
+                            local bmp = bitmap w h
+                            local img = render to:bmp vfb:false outputSize:[w, h]
+                            if bmp != undefined do (uiPreview.bitmap = bmp; lblStatus.text = "Corona Interactive preview")
                             )
                         )
                     ) catch (lblStatus.text = "Corona IR không khả dụng")
@@ -1033,10 +1036,13 @@ icon:#("NC_Render", 1)
                                 renderMethod = "Local SD (CUDA)"
                                 updateUIForMethod()
                             ) else (
-                            renderOutputWidth = int(spnWidth.value * 0.5)
-                            renderOutputHeight = int(spnHeight.value * 0.5)
-                            local img = render()
-                            if img != undefined do (uiPreview.bitmap = img; lblStatus.text = "V-Ray Interactive preview")
+                            local w = int(spnWidth.value * 0.5)
+                            local h = int(spnHeight.value * 0.5)
+                            renderOutputWidth = w
+                            renderOutputHeight = h
+                            local bmp = bitmap w h
+                            local img = render to:bmp vfb:false outputSize:[w, h]
+                            if bmp != undefined do (uiPreview.bitmap = bmp; lblStatus.text = "V-Ray Interactive preview")
                             )
                         )
                     ) catch (lblStatus.text = "V-Ray Interactive không khả dụng")
@@ -1105,18 +1111,19 @@ icon:#("NC_Render", 1)
                         
                         lblStatus.text = "Đang render toàn cảnh..."
                         local startTime = timeStamp()
-                        local img = render()
+                        local bmp = bitmap w h
+                        local img = render to:bmp vfb:false outputSize:[w, h]
                         local elapsed = (timeStamp() - startTime) / 1000.0
                         
-                        if img != undefined then
+                        if bmp != undefined then
                         (
-                            uiPreview.bitmap = img
+                            uiPreview.bitmap = bmp
                             lblStatus.text = ("Full render xong: " + (elapsed as string) + "s")
                             local saveDir = getSavePath caption:"Save render result?" types:"PNG|*.png"
                             if saveDir != undefined do
                             (
-                                img.filename = saveDir + "/nc_render_full.png"
-                                save img
+                                bmp.filename = saveDir + "/nc_render_full.png"
+                                save bmp
                                 close img
                             )
                         ) else lblStatus.text = "Render thất bại"
